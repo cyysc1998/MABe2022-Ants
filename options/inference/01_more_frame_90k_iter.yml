@@ -1,6 +1,6 @@
 # general settings
 # name: debug
-name: 00_baseline
+name: 01_more_frame
 model_type: SimCLRModel
 manual_seed: 0
 cudnn_deterministic: true
@@ -9,8 +9,8 @@ cudnn_deterministic: true
 common:
   num_frame: &num_frame 900
   frame_skip: &frame_skip 5
-  num_prev_frames: &num_prev_frames 3
-  num_next_frames: &num_next_frames 3
+  num_prev_frames: &num_prev_frames 5
+  num_next_frames: &num_next_frames 5
   frame_size: &frame_size [224, 224]
   out_emb_size: &out_emb_size 128
 
@@ -71,7 +71,7 @@ datasets:
 # network structures
 network:
   type: SimCLR
-  in_channels: 7
+  in_channels: 11
   out_emb_size: *out_emb_size
 
 # path
@@ -105,9 +105,9 @@ val:
 
 # test settings
 test:
-  test_freq: 100000
-  st_iter: 0
-  ed_iter: 100000
+  test_freq: 90000
+  st_iter: 90000
+  ed_iter: 90000
 
 # linear evaluation settings
 linear_eval:
