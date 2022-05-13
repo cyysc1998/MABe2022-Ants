@@ -7,7 +7,7 @@ class TransformsSimCLR:
     def __init__(self, size, pretrained, n_channel, train):
         self.train_transforms = T.Compose(
             [
-                T.RandomResizedCrop(size=size, scale=(0.25, 1.0)),
+                T.RandomResizedCrop(size=size, scale=(0.20, 0.76), ratio=(0.75, 1.33333)),
                 T.RandomHorizontalFlip(),
                 T.RandomVerticalFlip(),
                 # Taking the means of the normal distributions of the 3 channels
