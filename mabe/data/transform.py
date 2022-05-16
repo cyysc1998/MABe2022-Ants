@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import torchvision
 import torchvision.transforms as T
 
@@ -10,6 +11,7 @@ class TransformsSimCLR:
                 T.RandomResizedCrop(size=size, scale=(0.25, 1.0)),
                 T.RandomHorizontalFlip(),
                 T.RandomVerticalFlip(),
+                TemporalDifference(),
                 # Taking the means of the normal distributions of the 3 channels
                 # since we are moving to grayscale
                 T.Normalize(
@@ -46,3 +48,19 @@ class TransformsSimCLR:
             return self.train_transforms(x)
         else:
             return self.validation_transforms(x)
+        
+        
+class TemporalDifference(object):
+    """blur a single image on CPU"""
+    def __init__(self, p=0.5):
+       self.p = p
+
+    def __call__(self, img):
+        assert len(img.shape) == 4, f"Img shape is {img.shape}"
+        B, C, H, W = img.shape
+        if torch.rand(1) < self.p:
+            img = img.permute(1, 0, 2, 3)
+            img[1:] = img[1:] - img[0:C-1]
+            img = img.permute(1, 0, 2, 3)
+        
+        return img
