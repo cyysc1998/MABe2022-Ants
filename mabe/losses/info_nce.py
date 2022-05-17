@@ -1,5 +1,6 @@
 import torch
 import torch.distributed as dist
+import torch.nn as nn
 import torch.nn.functional as F
 
 
@@ -30,7 +31,7 @@ def info_nce_loss(embed, seq_id):
     x2 = torch.cat(GatherLayer.apply(x2), dim=0)
     pos_x = torch.cat(GatherLayer.apply(pos_x), dim=0)
     x = torch.cat([x1, x2, pos_x], dim=0)
-    
+
     n_views = len(embed)
     seq_id = torch.cat(GatherLayer.apply(seq_id), dim=0)
     seq_id = torch.cat([seq_id for _ in range(n_views)], dim=0)
@@ -43,13 +44,13 @@ def get_mask(sequence_id, n_views):
     b = len(sequence_id)
     mask_id = sequence_id[None, :] - sequence_id[:, None]
     zero_id = torch.where(mask_id == 0, 1, 0)
-    one_indices = torch.cat([torch.arange(b // n_views) for i in range(n_views)], dim=0)
+    one_indices = torch.cat([torch.arange(b // n_views) for i in range(n_views)], dim=0).to(sequence_id.device)
     one_indices = (one_indices.unsqueeze(0) == one_indices.unsqueeze(1)).long()
     mask = zero_id + one_indices
     pos_mask = torch.where(mask > 0, 1, 0)
     pos_mask.fill_diagonal_(0)
     neg_mask = torch.where(mask > 0, 0, 1)
-    return pos_mask, neg_mask
+    return pos_mask.detach(), neg_mask.detach()
 
 
 def contrastive_loss(x, sequence_id, n_views, temperature=1):

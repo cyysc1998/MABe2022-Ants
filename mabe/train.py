@@ -155,9 +155,9 @@ def main():
             if current_iter % opt["logger"]["save_checkpoint_freq"] == 0:
                 logger.info("Save model")
                 model.save(epoch, current_iter)
-                # logger.info("Validate")
-                # model.test(val_set, val_loader)
-                # model.save_result(epoch, current_iter, "val")
+                logger.info("Validate")
+                model.test(val_set, val_loader)
+                model.save_result(epoch, current_iter, "val")
                 # logger.info("Test")
                 # model.test(test_set, test_loader)
                 # model.save_result(epoch, current_iter, "test")
