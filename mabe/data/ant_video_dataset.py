@@ -2,6 +2,7 @@ import os
 
 import cv2
 import numpy as np
+import random
 import torch
 from torchvision.io import read_image
 from torchvision.io.image import ImageReadMode
@@ -51,8 +52,35 @@ class AntVideoDataset(torch.utils.data.Dataset):
         frame_idx = idx % self.num_frame
         video_name = self.video_names[video_idx]
         video_path = os.path.join(self.video_dir, video_name)
+        
+        frames = self.idx2clip(frame_idx)
+        pos_frame_idx = self.sample_clip_idx()
+        pos_frames = self.idx2clip(pos_frame_idx)
+        
+        ret.update({"x": frames})
+        ret.update({"pos_x": pos_frames)
+        ret.update({"seq_id": video_idx})
+        
 
-        index = np.array(
+        if self.labels is not None:
+            label = self.labels[video_name]["annotations"].T
+            label = label[frame_idx]
+            ret.update({"label": label})
+
+        return ret
+
+
+    def sample_clip_idx(self, base_idx):
+        random_list = [
+            *np.arange(0, base_idx - self.num_next_frames * self.frame_skip),
+            *np.arange(base_idx + self.num_next_frames * self.frame_skip + 1, self.num_frames + 1)
+        ]
+        pos_idx = random.choice(random_list)
+        return pos_idx
+
+    
+    def idx2clip(frame_idx):
+        indices = np.array(
             list(
                 range(
                     frame_idx - self.num_prev_frames * self.frame_skip,
@@ -61,17 +89,17 @@ class AntVideoDataset(torch.utils.data.Dataset):
                 )
             )
         ).clip(0, self.num_frame - 1)
+        
         frames = []
         for fnum in index:
             frame_path = os.path.join(video_path, f"{fnum}.jpg")
             frame = read_image(frame_path, mode=ImageReadMode.GRAY)
             frames.append(frame)
         frames = torch.cat(frames)
-        ret.update({"x": frames})
+        return frames
+        
 
-        if self.labels is not None:
-            label = self.labels[video_name]["annotations"].T
-            label = label[frame_idx]
-            ret.update({"label": label})
 
-        return ret
+
+
+
