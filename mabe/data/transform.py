@@ -24,6 +24,7 @@ class TransformsSimCLR:
                 )
                 if pretrained is True
                 else T.Lambda(lambda x: x),
+                T.RandomErasing(),
             ]
         )
 
