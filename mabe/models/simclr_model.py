@@ -73,19 +73,13 @@ class SimCLRModel(BaseModel):
 
     def feed_data(self, data, train):
         self.idx = data["idx"].to(self.device, non_blocking=True)
-        self.seq_id = data['seq_id'].to(self.device, non_blocking=True)
-        self.seq_id = data["seq_id"].to(self.device, non_blocking=True)
-        x = data["x"].to(self.device, non_blocking=True)
-        pos_x = data["pos_x"].to(self.device, non_blocking=True)
-        x = x.float() / 255.0
-        pos_x = pos_x.float() / 255.0
+        x_list = data["x"]
+        x_list = [x.to(self.device, non_blocking=True) for x in x_list]
+        x_list = [x.float() / 255.0 for x in x_list]
         if train:
-            self.x1 = self.transform_train(x)
-            self.x2 = self.transform_train(x)
-            self.pos_x = self.transform_train(pos_x)
+            self.x = [self.transform_train(x) for x in x_list]
         else:
-            self.x1 = self.transform_val(x)
-            self.x2 = self.x1
+            self.x = [self.transform_val(x) for x in x_list]
         if "label" in data:
             self.label = data["label"].to(self.device, non_blocking=True)
 
@@ -117,11 +111,15 @@ class SimCLRModel(BaseModel):
         l_total = 0
         loss_dict = OrderedDict()
 
-        h1, h2, h3, z1, z2, z3 = self.net(self.x1, self.x2, self.pos_x)
-        l_simclr = info_nce_loss([z1, z2, z3], self.seq_id)
-        l_total += l_simclr
-        loss_dict["l_simclr"] = l_simclr
+        x_list = self.net(self.x)
+        l_intra, l_inter = info_nce_loss(x_list)
+        l_total += l_intra
+        loss_dict["l_intra"] = l_intra
+        l_inter = l_inter * 0.1
+        l_total += l_inter
+        loss_dict["l_inter"] = l_inter
         loss_dict["temperature"] = self.net.module.temperature
+
         l_total.backward()
         # torch.nn.utils.clip_grad_norm_(
         #     self.net.parameters(), self.opt["train"]["grad_norm_clip"]
