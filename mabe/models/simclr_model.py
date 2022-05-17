@@ -73,11 +73,15 @@ class SimCLRModel(BaseModel):
 
     def feed_data(self, data, train):
         self.idx = data["idx"].to(self.device, non_blocking=True)
+        self.seq_id = data["seq_id"].to(self.device, non_blacking=True)
         x = data["x"].to(self.device, non_blocking=True)
+        pos_x = data["pos_x"].to(self.device, non_bloacking=True)
         x = x.float() / 255.0
+        pos_x = pos_x.float() / 255.0
         if train:
             self.x1 = self.transform_train(x)
             self.x2 = self.transform_train(x)
+            self.pos_x = self.transform(pos_x)
         else:
             self.x1 = self.transform_val(x)
             self.x2 = self.x1
@@ -90,9 +94,10 @@ class SimCLRModel(BaseModel):
         with autocast():
             l_total = 0
             loss_dict = OrderedDict()
-
             h1, h2, z1, z2 = self.net(self.x1, self.x2)
-            l_simclr = self.cri(z1, z2)
+            _, _, pos_z, _ = self.net(self.pos_x, self.pos_x)
+            
+            l_simclr = self.cri([z1, z2, pos_z], self.seq_id)
             l_total += l_simclr
             loss_dict["l_simclr"] = l_simclr
 
@@ -113,7 +118,8 @@ class SimCLRModel(BaseModel):
         loss_dict = OrderedDict()
 
         h1, h2, z1, z2 = self.net(self.x1, self.x2)
-        l_simclr = info_nce_loss(z1, z2)
+        _, _, pos_z, _ = self.net(self.pos_x, self.pos_x)
+        l_simclr = info_nce_loss([z1, z2, pos_z], self.seq_id)
         l_total += l_simclr
         loss_dict["l_simclr"] = l_simclr
         loss_dict["temperature"] = self.net.module.temperature
