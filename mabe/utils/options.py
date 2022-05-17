@@ -46,6 +46,7 @@ def parse(opt_path):
         osp.join(__file__, osp.pardir, osp.pardir, osp.pardir, osp.pardir)
     )
     # experiments_root = osp.join(opt["path"]["root"], "experiments", opt["name"])
+
     experiments_root = osp.join('/home/sc/code/mabe2022', "experiments", opt["name"])
     opt["path"]["experiments_root"] = experiments_root
     opt["path"]["models"] = osp.join(experiments_root, "models")
