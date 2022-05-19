@@ -1,6 +1,6 @@
 # general settings
 # name: debug
-name: 05_td
+name: 07_m_views
 model_type: SimCLRModel
 manual_seed: 0
 cudnn_deterministic: true
@@ -21,6 +21,8 @@ datasets:
     type: AntVideoDataset
     video_dir: '../data/ants/frames_cropped_224'
     frame_number_map_path: '../data/ants/frame_number_map_training.npy'
+    num_clip: 4
+    timespan: 450
     num_frame: *num_frame
     frame_skip: *frame_skip
     num_prev_frames: *num_prev_frames
@@ -29,7 +31,7 @@ datasets:
     has_label: false
 
     # data loader
-    batch_size_per_gpu: 96
+    batch_size_per_gpu: 48
     num_worker_per_gpu: 4
     pin_memory: true
 
@@ -39,12 +41,14 @@ datasets:
     video_dir: '../data/ants/frames_cropped_224'
     frame_number_map_path: '../data/ants/frame_number_map_testing.npy'
     keypoint_path: '../data/user_train.npy'
+    num_clip: ~
+    timespan: ~
     num_frame: *num_frame
     frame_skip: *frame_skip
     num_prev_frames: *num_prev_frames
     num_next_frames: *num_next_frames
     frame_size: *frame_size
-    has_label: false
+    has_label: true
 
     # data loader
     batch_size_per_gpu: 225
@@ -56,6 +60,8 @@ datasets:
     type: AntVideoDataset
     video_dir: '../data/ants/frames_cropped_224'
     frame_number_map_path: '../data/ants/frame_number_map_inference.npy'
+    num_clip: ~
+    timespan: ~
     num_frame: *num_frame
     frame_skip: *frame_skip
     num_prev_frames: *num_prev_frames
@@ -99,19 +105,19 @@ train:
 
 # validation settings
 val:
-  val_freq: 100000
+  val_freq: 10000
   st_iter: 0
   ed_iter: 100000
 
 # test settings
 test:
-  test_freq: 100000
-  st_iter: 0
-  ed_iter: 100000
+  test_freq: 60000
+  st_iter: 60000
+  ed_iter: 60000
 
 # linear evaluation settings
 linear_eval:
-  linear_eval_freq: 100000
+  linear_eval_freq: 10000
   st_iter: 0
   ed_iter: 100000
 
@@ -143,7 +149,7 @@ linear_eval:
       !!float 1e7,
     ]
   total_epoch: 20
-  meta_path: data/meta_info_val_0.txt
+  meta_path: ../data/ants/meta_info_val_0.txt
 
 # logging settings
 logger:

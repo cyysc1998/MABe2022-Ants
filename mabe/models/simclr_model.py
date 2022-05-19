@@ -13,7 +13,6 @@ from mabe.archs import define_network
 from mabe.data.transform import TransformsSimCLR
 from mabe.losses import info_nce_loss
 from mabe.models.base_model import BaseModel
-from mabe.simclr.modules import LARS
 from mabe.utils import get_root_logger, master_only
 
 
@@ -145,8 +144,8 @@ class SimCLRModel(BaseModel):
             self.feed_data(data, train=False)
             idxs.append(self.idx)
 
-            output = self.net(self.x1, self.x2)
-            feat = output[-2]
+            output = self.net(self.x)
+            feat = output[0]
             feats.append(feat)
 
             has_label = "label" in data

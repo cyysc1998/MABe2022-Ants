@@ -19,8 +19,10 @@ datasets:
   train:
     name: train_2859
     type: AntVideoDataset
-    video_dir: '../data/ants/frames_cropped_224'
-    frame_number_map_path: '../data/ants/frame_number_map_training.npy'
+    video_dir: 'data/training_samples'
+    frame_number_map_path: 'data/frame_number_map_training.npy'
+    num_clip: ~
+    timespan: ~
     num_frame: *num_frame
     frame_skip: *frame_skip
     num_prev_frames: *num_prev_frames
@@ -36,9 +38,11 @@ datasets:
   val:
     name: val_1948
     type: AntVideoDataset
-    video_dir: '../data/ants/frames_cropped_224'
-    frame_number_map_path: '../data/ants/frame_number_map_testing.npy'
+    video_dir: 'data/training_samples'
+    frame_number_map_path: 'data/frame_number_map_training.npy'
     keypoint_path: '../data/user_train.npy'
+    num_clip: ~
+    timespan: ~
     num_frame: *num_frame
     frame_skip: *frame_skip
     num_prev_frames: *num_prev_frames
@@ -54,8 +58,10 @@ datasets:
   test:
     name: test_9491
     type: AntVideoDataset
-    video_dir: '../data/ants/frames_cropped_224'
-    frame_number_map_path: '../data/ants/frame_number_map_inference.npy'
+    video_dir: 'data/training_samples'
+    frame_number_map_path: 'data/frame_number_map_training.npy'
+    num_clip: ~
+    timespan: ~
     num_frame: *num_frame
     frame_skip: *frame_skip
     num_prev_frames: *num_prev_frames
@@ -105,9 +111,9 @@ val:
 
 # test settings
 test:
-  test_freq: 100000
-  st_iter: 0
-  ed_iter: 100000
+  test_freq: 30000
+  st_iter: 30000
+  ed_iter: 30000
 
 # linear evaluation settings
 linear_eval:

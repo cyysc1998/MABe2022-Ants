@@ -9,9 +9,7 @@ class SimCLR(nn.Module):
         in_channels = opt["in_channels"]
         out_emb_size = opt["out_emb_size"]
 
-        self.encoder = torchvision.models.resnet50(pretrained=False)
-        state_dict = torch.load("/cache/resnet50-0676ba61.pth")
-        self.encoder.load_state_dict(state_dict)
+        self.encoder = torchvision.models.resnet50(pretrained=True)
         # Experimental setup for multiplying the grayscale channel
         # https://stackoverflow.com/a/54777347
         weight = self.encoder.conv1.weight.clone()

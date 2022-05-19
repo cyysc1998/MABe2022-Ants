@@ -19,6 +19,8 @@ def main():
     )
 
     # create train, validation, test datasets and dataloaders
+    for phase in opt["datasets"]:
+        opt["datasets"][phase]["phase"] = phase
     train_set, train_loader, num_iter_per_epoch = create_dataset_dataloader(
         opt["datasets"]["train"], shuffle=True, seed=seed
     )

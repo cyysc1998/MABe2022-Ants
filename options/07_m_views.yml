@@ -1,6 +1,6 @@
 # general settings
 # name: debug
-name: 06_n_views
+name: 07_m_views
 model_type: SimCLRModel
 manual_seed: 0
 cudnn_deterministic: true
@@ -31,7 +31,7 @@ datasets:
     has_label: false
 
     # data loader
-    batch_size_per_gpu: 64
+    batch_size_per_gpu: 48
     num_worker_per_gpu: 4
     pin_memory: true
 
@@ -154,7 +154,7 @@ linear_eval:
 # logging settings
 logger:
   print_freq: 100
-  save_checkpoint_freq: !!float 2e3
+  save_checkpoint_freq: !!float 1e4
   use_wandb: false
 
 find_unused_parameters: true

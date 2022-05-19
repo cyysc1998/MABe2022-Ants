@@ -19,7 +19,10 @@ class AntVideoDataset(torch.utils.data.Dataset):
         Initializing the dataset with images and labels
         """
         self.opt = opt
+        self.phase = opt["phase"]
         self.video_dir = opt["video_dir"]
+        self.num_clip = opt["num_clip"]
+        self.timespan = opt["timespan"]
         self.num_frame = opt["num_frame"]
         self.frame_skip = opt["frame_skip"]
         self.num_prev_frames = opt["num_prev_frames"]
