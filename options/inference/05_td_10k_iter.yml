@@ -1,0 +1,154 @@
+# general settings
+# name: debug
+name: 05_td
+model_type: SimCLRModel
+manual_seed: 0
+cudnn_deterministic: true
+
+# common settings
+common:
+  num_frame: &num_frame 900
+  frame_skip: &frame_skip 5
+  num_prev_frames: &num_prev_frames 3
+  num_next_frames: &num_next_frames 3
+  frame_size: &frame_size [224, 224]
+  out_emb_size: &out_emb_size 128
+
+# dataset and data loader settings
+datasets:
+  train:
+    name: train_2859
+    type: AntVideoDataset
+    video_dir: '../data/ants/frames_cropped_224'
+    frame_number_map_path: '../data/ants/frame_number_map_training.npy'
+    num_frame: *num_frame
+    frame_skip: *frame_skip
+    num_prev_frames: *num_prev_frames
+    num_next_frames: *num_next_frames
+    frame_size: *frame_size
+    has_label: false
+
+    # data loader
+    batch_size_per_gpu: 96
+    num_worker_per_gpu: 4
+    pin_memory: true
+
+  val:
+    name: val_1948
+    type: AntVideoDataset
+    video_dir: '../data/ants/frames_cropped_224'
+    frame_number_map_path: '../data/ants/frame_number_map_testing.npy'
+    keypoint_path: '../data/user_train.npy'
+    num_frame: *num_frame
+    frame_skip: *frame_skip
+    num_prev_frames: *num_prev_frames
+    num_next_frames: *num_next_frames
+    frame_size: *frame_size
+    has_label: true
+
+    # data loader
+    batch_size_per_gpu: 225
+    num_worker_per_gpu: 4
+    pin_memory: true
+  
+  test:
+    name: test_9491
+    type: AntVideoDataset
+    video_dir: '../data/ants/frames_cropped_224'
+    frame_number_map_path: '../data/ants/frame_number_map_inference.npy'
+    num_frame: *num_frame
+    frame_skip: *frame_skip
+    num_prev_frames: *num_prev_frames
+    num_next_frames: *num_next_frames
+    frame_size: *frame_size
+    has_label: false
+
+    # data loader
+    batch_size_per_gpu: 225
+    num_worker_per_gpu: 4
+    pin_memory: true
+
+# network structures
+network:
+  type: SimCLR
+  in_channels: 7
+  out_emb_size: *out_emb_size
+
+# path
+path:
+  pretrain_network: ~
+  strict_load: true
+
+# training settings
+train:
+  optim:
+    type: Adam
+    lr: !!float 1e-4
+    weight_decay: !!float 1e-6
+    betas: [0.9, 0.999]
+
+  scheduler:
+    type: CosineAnnealingRestartLR
+    periods: [100000]
+    restart_weights: [1]
+    eta_min: !!float 1e-7
+
+  total_iter: 100000
+  # iter_per_epoch: 3.3M / batch_size_per_gpu / world_size
+  warmup_iter: -1     # -1: no warm up
+
+# validation settings
+val:
+  val_freq: 10000
+  st_iter: 0
+  ed_iter: 100000
+
+# test settings
+test:
+  test_freq: 10000
+  st_iter: 10000
+  ed_iter: 10000
+
+# linear evaluation settings
+linear_eval:
+  linear_eval_freq: 10000
+  st_iter: 0
+  ed_iter: 100000
+
+  model_type: LinearEvalModel
+  
+  network:
+    type: LinearEval
+    input_dim: *out_emb_size
+    output_dim: 2
+      
+  num_seeds: 3
+  num_subtasks: 3
+  lr_list:
+    [
+      !!float 1e-7,
+      !!float 1e-6,
+      !!float 1e-5,
+      !!float 1e-4,
+      !!float 1e-3,
+      !!float 1e-2,
+      !!float 1e-1,
+      !!float 1e0,
+      !!float 1e1,
+      !!float 1e2,
+      !!float 1e3,
+      !!float 1e4,
+      !!float 1e5,
+      !!float 1e6,
+      !!float 1e7,
+    ]
+  total_epoch: 20
+  meta_path: ../data/ants/meta_info_val_0.txt
+
+# logging settings
+logger:
+  print_freq: 100
+  save_checkpoint_freq: !!float 1e4
+  use_wandb: false
+
+find_unused_parameters: true
