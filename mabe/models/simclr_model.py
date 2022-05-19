@@ -75,16 +75,21 @@ class SimCLRModel(BaseModel):
 
     def feed_data(self, data, train):
         self.idx = data["idx"].to(self.device, non_blocking=True)
-        x = data["x"]
+        x = data["x"] # (B, T, C, H, W)
+        B, T, C, H, W = x.shape
         x = x.to(self.device, non_blocking=True)
         x = x.float() / 255.0
-       
+        
+        x = x.reshape(B * T, C, H, W)
+
         if train:
             self.x1 = self.transform_train(x)
             self.x2 = self.transform_train(x)
         else:
             self.x1 = self.transform_val(x)
             self.x2 = self.x1
+        self.x1 = self.x1.reshape(B, T, C, H, W).permute(0, 2, 1, 3, 4)
+        self.x2 = self.x2.reshape(B, T, C, H, W).permute(0, 2, 1, 3, 4)
         if "label" in data:
             self.label = data["label"].to(self.device, non_blocking=True)
 

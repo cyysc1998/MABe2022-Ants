@@ -70,8 +70,7 @@ class AntVideoDataset(torch.utils.data.Dataset):
             frame_path = os.path.join(video_path, f"{fnum}.jpg")
             frame = read_image(frame_path, mode=ImageReadMode.RGB)
             frames.append(frame)
-        frames = torch.stack(frames, dim=0)
-        frames = frames.transpose(0, 1)
+        frames = torch.stack(frames, dim=0) # (T, C, H, W)
         ret.update({"x": frames})
 
         return ret
