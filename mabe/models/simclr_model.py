@@ -78,7 +78,6 @@ class SimCLRModel(BaseModel):
         x = data["x"]
         x = x.to(self.device, non_blocking=True)
         x = x.float() / 255.0
-        x = x.reshape(-1, *x.shape[-3:])
        
         if train:
             self.x1 = self.transform_train(x)
