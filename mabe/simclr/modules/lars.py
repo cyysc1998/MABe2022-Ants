@@ -5,9 +5,10 @@ Converted from TensorFlow to PyTorch
 https://github.com/google-research/simclr/blob/master/lars_optimizer.py
 """
 
+import re
+
 import torch
 from torch.optim.optimizer import Optimizer, required
-import re
 
 EETA_DEFAULT = 0.001
 

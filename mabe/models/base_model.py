@@ -4,10 +4,9 @@ from collections import OrderedDict
 from copy import deepcopy
 
 import torch
-from torch.nn.parallel import DataParallel, DistributedDataParallel
-
 from mabe.models import lr_scheduler as lr_scheduler
 from mabe.utils import master_only
+from torch.nn.parallel import DataParallel, DistributedDataParallel
 
 logger = logging.getLogger("mabe")
 

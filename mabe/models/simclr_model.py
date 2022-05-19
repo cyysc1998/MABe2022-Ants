@@ -3,18 +3,18 @@ from collections import OrderedDict
 from copy import deepcopy
 
 import numpy as np
-import torch
-import torch.distributed as dist
-from torch.cuda.amp import GradScaler
-from torch.cuda.amp import autocast as autocast
 from tqdm import tqdm
 
+import torch
+import torch.distributed as dist
 from mabe.archs import define_network
 from mabe.data.transform import TransformsSimCLR
 from mabe.losses import info_nce_loss
 from mabe.models.base_model import BaseModel
 from mabe.simclr.modules import LARS
 from mabe.utils import get_root_logger, master_only
+from torch.cuda.amp import GradScaler
+from torch.cuda.amp import autocast as autocast
 
 
 class SimCLRModel(BaseModel):
@@ -41,7 +41,9 @@ class SimCLRModel(BaseModel):
         pretrained = True
         num_prev_frames = opt["common"]["num_prev_frames"]
         num_next_frames = opt["common"]["num_next_frames"]
-        n_channel = num_prev_frames + num_next_frames + 1
+        num_segments = opt["common"]["num_segments"]
+        num_frames_per_segment = opt["common"]["num_frames_per_segment"]
+        n_channel = num_segments * num_frames_per_segment
         self.transform_train = TransformsSimCLR(
             frame_size, pretrained, n_channel, train=True
         )
@@ -73,13 +75,17 @@ class SimCLRModel(BaseModel):
 
     def feed_data(self, data, train):
         self.idx = data["idx"].to(self.device, non_blocking=True)
-        x_list = data["x"]
-        x_list = [x.to(self.device, non_blocking=True) for x in x_list]
-        x_list = [x.float() / 255.0 for x in x_list]
+        x = data["x"]
+        x = x.to(self.device, non_blocking=True)
+        x = x.float() / 255.0
+        x = x.reshape(-1, *x.shape[-3:])
+       
         if train:
-            self.x = [self.transform_train(x) for x in x_list]
+            self.x1 = self.transform_train(x)
+            self.x2 = self.transform_train(x)
         else:
-            self.x = [self.transform_val(x) for x in x_list]
+            self.x1 = self.transform_val(x)
+            self.x2 = self.x1
         if "label" in data:
             self.label = data["label"].to(self.device, non_blocking=True)
 
@@ -111,13 +117,10 @@ class SimCLRModel(BaseModel):
         l_total = 0
         loss_dict = OrderedDict()
 
-        x_list = self.net(self.x)
-        l_intra, l_inter = info_nce_loss(x_list)
-        l_total += l_intra
-        loss_dict["l_intra"] = l_intra
-        l_inter = l_inter * 0.1
-        l_total += l_inter
-        loss_dict["l_inter"] = l_inter
+        z1, z2 = self.net(self.x1, self.x2)
+        l_simclr = info_nce_loss(z1, z2)
+        l_total += l_simclr
+        loss_dict["l_simclr"] = l_simclr
         loss_dict["temperature"] = self.net.module.temperature
 
         l_total.backward()

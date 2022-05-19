@@ -1,12 +1,13 @@
 import os
+import random
 
 import cv2
 import numpy as np
-import random
+from tqdm import tqdm
+
 import torch
 from torchvision.io import read_image
 from torchvision.io.image import ImageReadMode
-from tqdm import tqdm
 
 
 class AntVideoDataset(torch.utils.data.Dataset):
@@ -26,6 +27,9 @@ class AntVideoDataset(torch.utils.data.Dataset):
         self.num_next_frames = opt["num_next_frames"]
         self.frame_size = opt["frame_size"]
         self.has_label = opt["has_label"]
+        self.num_segments = opt["num_segments"]
+        self.num_frame_per_segment = opt["num_frames_per_segment"]
+        self.segment_duration = opt["segment_duration"]
 
         # frame_number_map
         self.frame_number_map = np.load(
@@ -58,46 +62,34 @@ class AntVideoDataset(torch.utils.data.Dataset):
             label = label[frame_idx]
             ret.update({"label": label})
 
-        if self.phase == "train":
-            frame_idxs = [frame_idx, frame_idx]
-            valid_idxs = list(
-                set(
-                    range(
-                        max(0, frame_idx - self.timespan),
-                        min(self.num_frame, frame_idx + self.timespan + 1),
-                    )
-                )
-                - set(frame_idxs)
-            )
-            random.shuffle(valid_idxs)
-            frame_idxs += valid_idxs[: (self.num_clip - 2)]
-        else:
-            frame_idxs = [frame_idx]
+        
         # print(frame_idxs)
-        frames_list = []
-        for frame_idx in frame_idxs:
-            index = np.array(
-                list(
-                    range(
-                        frame_idx - self.num_prev_frames * self.frame_skip,
-                        frame_idx + self.num_next_frames * self.frame_skip + 1,
-                        self.frame_skip,
-                    )
-                )
-            ).clip(0, self.num_frame - 1)
-            frames = []
-            for fnum in index:
-                frame_path = os.path.join(video_path, f"{fnum}.jpg")
-                frame = read_image(frame_path, mode=ImageReadMode.GRAY)
-                frames.append(frame)
-            frames = torch.cat(frames)
-            frames_list.append(frames)
-        ret.update({"x": frames_list})
+        frames_list = self._sample_indices(self.num_segments, self.num_frame_per_segment, self.segment_duration)
+        frames = []
+        for fnum in frames_list:
+            frame_path = os.path.join(video_path, f"{fnum}.jpg")
+            frame = read_image(frame_path, mode=ImageReadMode.RGB)
+            frames.append(frame)
+        frames = torch.cat(frames)
+        frames = frames.reshape((self.num_segments, -1) + frames.shape[-2:])
+        ret.update({"x": frames})
 
         return ret
-        
 
-
-
-
-
+    def _sample_indices(self, num_segments, num_frames_per_segment, segment_duration):
+        """
+        Samples indices for segments.
+        """
+        indices = []
+        time_duration = (num_segments - 1) * segment_duration + num_frames_per_segment
+        assert time_duration < self.num_frame // 2, "Not enough frames to sample"
+        assert num_segments % 2 == 1
+        center_frame_idx = random.randint(0, self.num_frame)
+        left_frame_idx = center_frame_idx -  segment_duration * num_segments // 2 - num_frames_per_segment // 2
+        left_frame_idxs = [left_frame_idx + i * segment_duration for i in range(0, num_segments)]
+        for i in left_frame_idxs:
+            for j in range(num_frames_per_segment):
+                indices.append(i + j)
+                
+        indices = np.array(indices).clip(0, self.num_frame - 1)
+        return indices

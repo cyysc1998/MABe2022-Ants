@@ -2,16 +2,16 @@ from collections import OrderedDict
 from copy import deepcopy
 
 import numpy as np
+
 import torch
 import torch.distributed as dist
 import torch.nn.functional as F
-from torch.cuda.amp import GradScaler
-from torch.cuda.amp import autocast as autocast
-
 from mabe.archs import define_network
 from mabe.models.base_model import BaseModel
 from mabe.simclr.modules import LARS
 from mabe.utils import get_root_logger, master_only
+from torch.cuda.amp import GradScaler
+from torch.cuda.amp import autocast as autocast
 
 
 class LinearEvalModel(BaseModel):

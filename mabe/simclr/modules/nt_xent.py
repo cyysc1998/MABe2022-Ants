@@ -1,6 +1,7 @@
 import torch
-import torch.nn as nn
 import torch.distributed as dist
+import torch.nn as nn
+
 from .gather import GatherLayer
 
 

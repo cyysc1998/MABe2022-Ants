@@ -1,6 +1,6 @@
 import numpy as np
-import torch
 
+import torch
 import torchvision
 import torchvision.transforms as T
 
@@ -66,4 +66,3 @@ class TemporalDifference(object):
             img = img.permute(1, 0, 2, 3)
         
         return img
-

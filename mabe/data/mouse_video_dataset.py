@@ -2,10 +2,11 @@ import os
 
 import cv2
 import numpy as np
+from tqdm import tqdm
+
 import torch
 from torchvision.io import read_image
 from torchvision.io.image import ImageReadMode
-from tqdm import tqdm
 
 
 class MouseVideoDataset(torch.utils.data.Dataset):

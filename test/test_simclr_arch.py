@@ -1,6 +1,6 @@
-import torch
 from tqdm import tqdm
 
+import torch
 from mabe.models.archs import define_network
 from mabe.utils import parse
 

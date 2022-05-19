@@ -1,5 +1,7 @@
-import numpy as np
 import random
+
+import numpy as np
+
 random.seed(0)
 root = "../data/ants"
 keypoints_train_path = f"{root}/user_train.npy"

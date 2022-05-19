@@ -7,22 +7,12 @@ from os import path as osp
 
 import torch
 import torch.distributed as dist
-
 from mabe.data import create_dataset_dataloader
 from mabe.models import create_model
-from mabe.utils import (
-    MessageLogger,
-    dict2str,
-    get_env_info,
-    get_root_logger,
-    get_time_str,
-    init_dist,
-    init_tb_logger,
-    init_wandb_logger,
-    make_exp_dirs,
-    parse,
-    set_random_seed,
-)
+from mabe.utils import (MessageLogger, dict2str, get_env_info, get_root_logger,
+                        get_time_str, init_dist, init_tb_logger,
+                        init_wandb_logger, make_exp_dirs, parse,
+                        set_random_seed)
 
 
 def parse_options():
