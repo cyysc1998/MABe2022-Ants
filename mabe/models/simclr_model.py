@@ -147,7 +147,7 @@ class SimCLRModel(BaseModel):
             self.feed_data(data, train=False)
             idxs.append(self.idx)
 
-            output = self.net(self.x1, self.x2)
+            output = self.net(self.x1, self.x2, self.x2)
             feat = output[-2]
             feats.append(feat)
 
