@@ -92,9 +92,9 @@ class SimCLRModel(BaseModel):
             loss_dict = OrderedDict()
 
             h1, h2, z1, z2 = self.net(self.x1, self.x2)
-            l_simclr = self.cri(z1, z2)
-            l_total += l_simclr
-            loss_dict["l_simclr"] = l_simclr
+            l_simsiam = self.cri(z1, z2)
+            l_total += l_simsiam
+            loss_dict["l_simsiam"] = l_simsiam
 
         self.scaler.scale(l_total).backward()
         self.scaler.unscale_(self.optimizer)
@@ -112,10 +112,10 @@ class SimCLRModel(BaseModel):
         l_total = 0
         loss_dict = OrderedDict()
 
-        h1, h2, z1, z2 = self.net(self.x1, self.x2)
-        l_simclr = info_nce_loss(z1, z2)
-        l_total += l_simclr
-        loss_dict["l_simclr"] = l_simclr
+        p1, p2, z1, z2 = self.net(self.x1, self.x2)
+        l_simsiam = info_nce_loss(p1, p2, z1, z2)
+        l_total += l_simsiam
+        loss_dict["l_simsiam"] = l_simsiam
         loss_dict["temperature"] = self.net.module.temperature
 
         l_total.backward()

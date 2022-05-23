@@ -1,5 +1,6 @@
 import torch
 import torch.distributed as dist
+import torch.nn as nn
 import torch.nn.functional as F
 
 
@@ -24,20 +25,13 @@ class GatherLayer(torch.autograd.Function):
         return grad_out
 
 
-def info_nce_loss(x1, x2):
-    x1 = torch.cat(GatherLayer.apply(x1), dim=0)
-    x2 = torch.cat(GatherLayer.apply(x2), dim=0)
+def info_nce_loss(p1, p2, z1, z2):
+    p1 = torch.cat(GatherLayer.apply(p1), dim=0)
+    p2 = torch.cat(GatherLayer.apply(p2), dim=0)
+    z1 = torch.cat(GatherLayer.apply(z1), dim=0)
+    z2 = torch.cat(GatherLayer.apply(z2), dim=0)
 
-    B = x1.shape[0]
-    x = torch.cat([x1, x2])
-
-    logits = x @ x.T
-    mask = torch.eye(2 * B).to(logits)
-    logits = logits.masked_fill(mask == 1, float("-inf"))
-
-    labels = (torch.Tensor(list(range(2 * B))) + B) % (2 * B)
-    labels = labels.to(logits).long()
-
-    loss = F.cross_entropy(logits, labels)
+    criterion = nn.CosineSimilarity(dim=1)
+    loss = -(criterion(p1, z2).mean() + criterion(p2, z1).mean()) * 0.5
 
     return loss
