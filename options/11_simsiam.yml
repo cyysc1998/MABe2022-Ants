@@ -74,7 +74,7 @@ network:
   in_channels: 7
   out_emb_size: *out_emb_size
   # SimSiam
-  pred_dim: 128
+  pred_dim: *out_emb_size
 
 # path
 path:

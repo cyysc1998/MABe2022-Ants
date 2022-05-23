@@ -11,9 +11,18 @@ class SimSiam(nn.Module):
         super(SimSiam, self).__init__()
         dim = opt["pred_dim"]
         pred_dim = opt["out_emb_size"]
+        in_channels = opt["in_channels"]
         # create the encoder
         # num_classes is the output fc dimension, zero-initialize last BNs
-        self.encoder = torchvision.models.resnet50(pretrained=True)
+        self.encoder = torchvision.models.resnet50(pretrained=True, num_classes=dim, zero_init_residual=True)
+        weight = self.encoder.conv1.weight.clone()
+        self.encoder.conv1 = torch.nn.Conv2d(
+            in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False
+        )
+        # normalize back by in_channels after tiling
+        self.encoder.conv1.weight.data = (
+            weight.sum(dim=1, keepdim=True).tile(1, in_channels, 1, 1) / in_channels
+        )
 
         # build a 3-layer projector
         prev_dim = self.encoder.fc.weight.shape[1]
@@ -33,6 +42,8 @@ class SimSiam(nn.Module):
                                         nn.ReLU(inplace=True), # hidden layer
                                         nn.Linear(pred_dim, dim)) # output layer
 
+        self.temperature = nn.Parameter(torch.ones(()), requires_grad=True)
+
     def forward(self, x1, x2):
         """
         Input:
@@ -46,7 +57,6 @@ class SimSiam(nn.Module):
         # compute features for one view
         z1 = self.encoder(x1) # NxC
         z2 = self.encoder(x2) # NxC
-
         p1 = self.predictor(z1) # NxC
         p2 = self.predictor(z2) # NxC
 
