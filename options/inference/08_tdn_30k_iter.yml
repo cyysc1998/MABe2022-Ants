@@ -82,7 +82,7 @@ datasets:
     has_label: false
 
     # data loader
-    batch_size_per_gpu: 24
+    batch_size_per_gpu: 144
     num_worker_per_gpu: 4
     pin_memory: true
 
@@ -129,9 +129,9 @@ val:
 
 # test settings
 test:
-  test_freq: 100000
-  st_iter: 0
-  ed_iter: 100000
+  test_freq: 30000
+  st_iter: 30000
+  ed_iter: 30000
 
 # linear evaluation settings
 linear_eval:
