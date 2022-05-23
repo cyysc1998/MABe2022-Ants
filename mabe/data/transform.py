@@ -12,7 +12,6 @@ class TransformsSimCLR:
                 T.RandomResizedCrop(size=size, scale=(0.25, 1.0)),
                 T.RandomHorizontalFlip(),
                 T.RandomVerticalFlip(),
-                TemporalDifference(),
                 # Taking the means of the normal distributions of the 3 channels
                 # since we are moving to grayscale
                 T.Normalize(
@@ -23,7 +22,6 @@ class TransformsSimCLR:
                 )
                 if pretrained is True
                 else T.Lambda(lambda x: x),
-                T.RandomErasing(),
             ]
         )
 

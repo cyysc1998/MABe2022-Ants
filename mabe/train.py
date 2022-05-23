@@ -124,9 +124,9 @@ def main():
 
     logger.info("Save model")
     model.save(0, 0)
-    logger.info("Validate")
-    model.test(val_set, val_loader)
-    model.save_result(0, 0, "val")
+    # logger.info("Validate")
+    # model.test(val_set, val_loader)
+    # model.save_result(0, 0, "val")
     # logger.info("Test")
     # model.test(test_set, test_loader)
     # model.save_result(0, 0, "test")
