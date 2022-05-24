@@ -57,8 +57,8 @@ class AntVideoDataset(torch.utils.data.Dataset):
         pos_frame_idx = self.sample_clip_idx(frame_idx)
         pos_frames = self.idx2clip(pos_frame_idx, video_path)
         
-        ret.update({"x": frames})
-        ret.update({"pos_x": pos_frames})
+        ret.update({"x1": frames})
+        ret.update({"x2": pos_frames})
         ret.update({"seq_id": video_idx})
         
 

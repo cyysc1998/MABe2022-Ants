@@ -12,7 +12,6 @@ class TransformsSimCLR:
                 T.RandomResizedCrop(size=size, scale=(0.25, 1.0)),
                 T.RandomHorizontalFlip(),
                 T.RandomVerticalFlip(),
-                TemporalDifference(),
                 # Taking the means of the normal distributions of the 3 channels
                 # since we are moving to grayscale
                 T.Normalize(
@@ -23,7 +22,25 @@ class TransformsSimCLR:
                 )
                 if pretrained is True
                 else T.Lambda(lambda x: x),
-                T.RandomErasing(),
+            ]
+        )
+
+        self.train_transforms_td = T.Compose(
+            [
+                T.RandomResizedCrop(size=size, scale=(0.25, 1.0)),
+                T.RandomHorizontalFlip(),
+                T.RandomVerticalFlip(),
+                TemporalDifference(p=1),
+                # Taking the means of the normal distributions of the 3 channels
+                # since we are moving to grayscale
+                T.Normalize(
+                    mean=np.mean([0.485, 0.456, 0.406]).repeat(n_channel),
+                    std=np.sqrt(
+                        (np.array([0.229, 0.224, 0.225]) ** 2).sum() / 9
+                    ).repeat(n_channel),
+                )
+                if pretrained is True
+                else T.Lambda(lambda x: x),
             ]
         )
 
@@ -46,8 +63,10 @@ class TransformsSimCLR:
         self.train = train
 
     def __call__(self, x):
-        if self.train:
+        if self.train == True:
             return self.train_transforms(x)
+        elif self.train == 'td':
+            return self.train_transforms_td(x)
         else:
             return self.validation_transforms(x)
 

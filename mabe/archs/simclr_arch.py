@@ -26,8 +26,8 @@ class SimCLR(nn.Module):
         self.encoder = simclr(encoder, out_emb_size, n_features)
         self.temperature = nn.Parameter(torch.ones(()), requires_grad=True)
 
-    def forward(self, x1, x2, x3):
-        h1, h2, h3, z1, z2, z3 = self.encoder(x1, x2, x3)
+    def forward(self, x_list):
+        z_list = self.encoder(x_list)
         # z1 = z1 * self.temperature
         # z2 = z2 * self.temperature
-        return h1, h2, h3, z1, z2, z3
+        return z_list
