@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torchvision
+import torch.utils.model_zoo as model_zoo
 
 
 class SimSiam(nn.Module):
@@ -14,13 +15,15 @@ class SimSiam(nn.Module):
         in_channels = opt["in_channels"]
         # create the encoder
         # num_classes is the output fc dimension, zero-initialize last BNs
-        self.encoder = torchvision.models.resnet50(pretrained=True, num_classes=dim, zero_init_residual=True)
+        self.encoder = torchvision.models.resnet50(num_classes=dim, zero_init_residual=True)
+        ckpt_url = 'https://dl.fbaipublicfiles.com/simsiam/models/100ep-256bs/pretrain/checkpoint_0099.pth.tar'
+        self.encoder.load_state_dict(model_zoo.load_url(ckpt_url),strict=False)
         weight = self.encoder.conv1.weight.clone()
         self.encoder.conv1 = torch.nn.Conv2d(
             in_channels, 64, kernel_size=7, stride=2, padding=3, bias=False
         )
         # normalize back by in_channels after tiling
-        self.encoder.conv1.weight.data = (
+`n-        self.encoder.conv1.weight.data = (
             weight.sum(dim=1, keepdim=True).tile(1, in_channels, 1, 1) / in_channels
         )
 
