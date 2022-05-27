@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import os
 from os import path as osp
 
 import yaml
@@ -47,7 +48,7 @@ def parse(opt_path):
     )
     # experiments_root = osp.join(opt["path"]["root"], "experiments", opt["name"])
 
-    experiments_root = osp.join('/home/sunchao/Multi_Agent_Round_2/MABe2022', "experiments", opt["name"])
+    experiments_root = osp.join(os.getcwd(), "experiments", opt["name"])
     opt["path"]["experiments_root"] = experiments_root
     opt["path"]["models"] = osp.join(experiments_root, "models")
     opt["path"]["tb_logger"] = osp.join(experiments_root, "tb_logger")

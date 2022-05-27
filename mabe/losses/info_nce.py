@@ -2,6 +2,7 @@ import torch
 import torch.distributed as dist
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 
 
 class GatherLayer(torch.autograd.Function):
@@ -32,7 +33,8 @@ def info_nce_loss(x_list):
     N = x_list[0].shape[0]
 
     # create logits
-    logits = x @ x.T
+    temperature = 0.07
+    logits = nn.CosineSimilarity(dim=2)(z.unsqueeze(1), z.unsqueeze(0)) / temperature
 
     # create labels
     labels = torch.eye(M * N)
