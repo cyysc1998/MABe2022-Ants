@@ -30,7 +30,7 @@ class TransformsSimCLR:
                 T.RandomResizedCrop(size=size, scale=(0.25, 1.0)),
                 T.RandomHorizontalFlip(),
                 T.RandomVerticalFlip(),
-                TemporalDifference(p=1),
+                TemporalDifference(p=0.5),
                 # Taking the means of the normal distributions of the 3 channels
                 # since we are moving to grayscale
                 T.Normalize(

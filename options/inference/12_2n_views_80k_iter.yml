@@ -105,9 +105,9 @@ val:
 
 # test settings
 test:
-  test_freq: 100000
-  st_iter: 0
-  ed_iter: 100000
+  test_freq: 80000
+  st_iter: 80000
+  ed_iter: 80000
 
 # linear evaluation settings
 linear_eval:
