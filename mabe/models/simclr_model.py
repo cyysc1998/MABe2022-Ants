@@ -129,7 +129,8 @@ class SimCLRModel(BaseModel):
         l_intra, l_inter = info_nce_loss(x_list)
         l_total += l_intra
         loss_dict["l_intra"] = l_intra
-        l_inter = l_inter * 0.1
+        # l_inter = l_inter * 0.1
+        l_inter = l_inter * self.adjust_weight(current_iter)
         l_total += l_inter
         loss_dict["l_inter"] = l_inter
         loss_dict["temperature"] = self.net.module.temperature
@@ -145,6 +146,13 @@ class SimCLRModel(BaseModel):
         )
 
         self.log_dict = self.reduce_loss_dict(loss_dict)
+        
+    def adjust_weight(self, current_iter):
+        if current_iter <= 50000:
+            return 0.1
+        elif current_iter <= 70000:
+            return 0.1 * (current_iter - 50000) / 20000
+        return 0
 
     @torch.no_grad()
     def test(self, dataset, dataloader):
