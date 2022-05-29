@@ -99,7 +99,7 @@ train:
 
 # validation settings
 val:
-  val_freq: 10000
+  val_freq: 100000
   st_iter: 0
   ed_iter: 100000
 
