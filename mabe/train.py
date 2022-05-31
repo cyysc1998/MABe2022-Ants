@@ -142,7 +142,7 @@ def main():
             )
             # training
             model.feed_data(train_data, train=True)
-            model.optimize_parameters(current_iter)
+            model.optimize_parameters_amp(current_iter)
             iter_time = time.time() - iter_time
             # log
             if current_iter % opt["logger"]["print_freq"] == 0:

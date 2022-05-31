@@ -75,6 +75,7 @@ def create_dataloader(dataset, dataset_opt, sampler, seed):
         sampler=sampler,
         num_workers=dataset_opt["num_worker_per_gpu"],
         pin_memory=dataset_opt["pin_memory"],
+        drop_last=True
     )
     dataloader_args["worker_init_fn"] = partial(
         worker_init_fn,
