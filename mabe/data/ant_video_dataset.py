@@ -1,6 +1,7 @@
 import os
 
 import cv2
+import math
 import numpy as np
 import random
 import torch
@@ -53,8 +54,8 @@ class AntVideoDataset(torch.utils.data.Dataset):
         video_name = self.video_names[video_idx]
         video_path = os.path.join(self.video_dir, video_name)
         
+        frame_idx, pos_frame_idx = self.sample_ssl_sequence(self.num_frame, self.num_prev_frames, self.frame_skip)
         frames = self.idx2clip(frame_idx, video_path)
-        pos_frame_idx = self.sample_clip_idx(frame_idx)
         pos_frames = self.idx2clip(pos_frame_idx, video_path)
         
         ret.update({"x1": frames})
@@ -98,6 +99,57 @@ class AntVideoDataset(torch.utils.data.Dataset):
         frames = torch.cat(frames)
         return frames
         
+        
+        
+    def sample_ssl_sequence(self, sequence, num_steps, stride):
+        '''
+            Pytorch version of https://github.com/tensorflow/models/blob/14342e4ecf/official/projects/video_ssl/ops/video_ssl_preprocess_ops.py
+        '''
+        sequence_length = sequence
+        max_offset = lambda: sequence_length - (num_steps - 1) * stride \
+            if sequence_length > (num_steps - 1) * stride \
+            else \
+            lambda: sequence_length
+        max_offset = max_offset()
+
+        def cdf(k, power=1.0):
+            """Cumulative distribution function for x^power."""
+            p = -math.pow(k, power + 1) / (
+                power * math.pow(max_offset, power + 1)) + k * (power + 1) / (
+                    power * max_offset
+                )
+            return p
+
+        u = torch.Tensor(1).uniform_(0, 1)
+        k_low = torch.tensor([0.0])
+        k_up = max_offset
+        k = math.floor(max_offset / 2)
+
+        c = lambda k_low, k_up, k: math.fabs(k_up - k_low) > 1.0
+
+        b = lambda k_low, k_up, k: \
+            [k_low, k, math.floor((k + k_low) / 2.0)] if cdf(k) > u else \
+            [k, k_up, math.floor((k_up + k) / 2.0)]
+
+        while c(k_low, k_up, k):
+            k_low, k_up, k = b(k_low, k_up, k)
+
+        delta = k
+
+        choice_1 = \
+            torch.randint(0, max_offset, [1]) \
+            if max_offset == sequence_length else \
+            torch.randint(0, max_offset - delta, [1])
+
+        choice_2 = \
+            torch.randint(0, max_offset, [1]) \
+            if max_offset == sequence_length else \
+            choice_1 + delta
+
+        indices = [choice_1, choice_2]
+        random.shuffle(indices)
+
+        return indices
 
 
 
