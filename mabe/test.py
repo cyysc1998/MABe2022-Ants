@@ -44,9 +44,10 @@ def main():
     # training
     logger.info(f"Start testing.")
 
-    for current_iter in range(
-        opt["test"]["st_iter"], opt["test"]["ed_iter"] + 1, opt["test"]["test_freq"]
-    ):
+    # for current_iter in range(
+    #     opt["test"]["st_iter"], opt["test"]["ed_iter"] + 1, opt["test"]["test_freq"]
+    # ):
+    for current_iter in opt["test"]["iter_list"]:
         ckpt_path = f"{opt['path']['models']}/net_{current_iter}.pth"
         model.load_network(model.net, ckpt_path)
         model.test(test_set, test_loader)
