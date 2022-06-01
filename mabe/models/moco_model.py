@@ -11,15 +11,15 @@ from tqdm import tqdm
 
 from mabe.archs import define_network
 from mabe.data.transform import TransformsSimCLR
-from mabe.losses import info_nce_loss
+from mabe.losses import info_nce_loss, cross_entropy_loss
 from mabe.models.base_model import BaseModel
 from mabe.simclr.modules import LARS
 from mabe.utils import get_root_logger, master_only
 
 
-class SimCLRModel(BaseModel):
+class MOCOModel(BaseModel):
     def __init__(self, opt):
-        super(SimCLRModel, self).__init__(opt)
+        super(MOCOModel, self).__init__(opt)
 
         # define network
         self.net = define_network(deepcopy(opt["network"]))
@@ -68,8 +68,12 @@ class SimCLRModel(BaseModel):
             self.optimizer = torch.optim.AdamW(
                 self.net.parameters(), **train_opt["optim"]
             )
-        elif optimizer == "LARS":
-            optimizer = LARS(self.net.parameters(), **train_opt["optim"])
+        elif optim_type == "LARS":
+            self.optimizer = LARS(self.net.parameters(), **train_opt["optim"])
+        elif optim_type == "SGD":
+            self.optimizer = torch.optim.SGD(
+                self.net.parameters(), **train_opt["optim"]
+            )
         else:
             raise NotImplementedError(f"optimizer {optim_type} is not supperted yet.")
         self.optimizers.append(self.optimizer)
@@ -90,6 +94,8 @@ class SimCLRModel(BaseModel):
         else:
             self.x1 = self.transform_val(x1)
             self.x2 = self.x1
+            self.x3 = self.x1
+            self.x4 = self.x1
         if "label" in data:
             self.label = data["label"].to(self.device, non_blocking=True)
 
@@ -100,17 +106,17 @@ class SimCLRModel(BaseModel):
             l_total = 0
             loss_dict = OrderedDict()
             
-            x_list = self.net([self.x11, self.x12, self.x21, self.x22])
-            l_intra, l_inter = info_nce_loss(x_list)
+            logits, labels = self.net(self.x11, self.x12, self.x21, self.x22)
+            l_intra, l_inter = cross_entropy_loss(logits, labels, inter_split=logits.shape[0] // 3)
             l_total += l_intra
             loss_dict["l_intra"] = l_intra
-            l_inter = l_inter * 0.1
+            l_inter = l_inter * 1
             l_total += l_inter
             loss_dict["l_inter"] = l_inter
-            loss_dict["temperature"] = self.net.module.temperature
+            # loss_dict["temperature"] = self.net.module.T
 
         self.scaler.scale(l_total).backward()
-        self.scaler.unscale_(self.optimizer)
+        # self.scaler.unscale_(self.optimizer)
         # torch.nn.utils.clip_grad_norm_(
         #     self.net.parameters(), self.opt["train"]["grad_norm_clip"]
         # )
@@ -125,15 +131,15 @@ class SimCLRModel(BaseModel):
         l_total = 0
         loss_dict = OrderedDict()
 
-        x_list = self.net([self.x11, self.x12, self.x21, self.x22])
-        l_intra, l_inter = info_nce_loss(x_list)
+        logits, labels = self.net(self.x11, self.x12, self.x21, self.x22)
+        l_intra, l_inter = cross_entropy_loss(logits, labels, inter_split=logits.shape[0] // 3, inter_weight=0.1)
         l_total += l_intra
         loss_dict["l_intra"] = l_intra
-        # l_inter = l_inter * 0.1
-        l_inter = l_inter * self.adjust_weight(current_iter)
+        l_inter = l_inter * 0.1
+        # l_inter = l_inter * self.adjust_weight(current_iter)
         l_total += l_inter
         loss_dict["l_inter"] = l_inter
-        loss_dict["temperature"] = self.net.module.temperature
+        loss_dict["temperature"] = self.net.module.T
 
         l_total.backward()
         # torch.nn.utils.clip_grad_norm_(
@@ -141,8 +147,8 @@ class SimCLRModel(BaseModel):
         # )
         self.optimizer.step()
 
-        self.net.module.temperature.data = torch.clamp(
-            self.net.module.temperature.data, 0, 4.6052
+        self.net.module.T.data = torch.clamp(
+            self.net.module.T.data, 0, 4.6052
         )
 
         self.log_dict = self.reduce_loss_dict(loss_dict)
@@ -167,8 +173,8 @@ class SimCLRModel(BaseModel):
             self.feed_data(data, train=False)
             idxs.append(self.idx)
 
-            output = self.net([self.x1, self.x2])
-            feat = output[-2]
+            output = self.net(self.x1, self.x2, self.x3, self.x4)
+            feat = output
             feats.append(feat)
 
             has_label = "label" in data
