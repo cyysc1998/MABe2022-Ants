@@ -112,7 +112,7 @@ test:
   test_freq: 100000
   st_iter: 0
   ed_iter: *total_iter
-  iter_list: [2000, 12000, 20000, 30000, 50000]
+  iter_list: [6000, 12000, 20000, 42000, 50000]
 
 # linear evaluation settings
 linear_eval:

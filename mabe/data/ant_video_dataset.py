@@ -32,6 +32,9 @@ class AntVideoDataset(torch.utils.data.Dataset):
         self.frame_number_map = np.load(
             opt["frame_number_map_path"], allow_pickle=True
         ).item()
+        self.is_train = (
+            'train' in os.path.basename(opt["frame_number_map_path"])
+        )
         self.video_names = list(self.frame_number_map.keys())
         # IMPORTANT: the frame number map should be sorted
         frame_nums = np.array([self.frame_number_map[k] for k in self.video_names])
@@ -54,7 +57,11 @@ class AntVideoDataset(torch.utils.data.Dataset):
         video_name = self.video_names[video_idx]
         video_path = os.path.join(self.video_dir, video_name)
         
-        frame_idx, pos_frame_idx = self.sample_ssl_sequence(self.num_frame, self.num_prev_frames, self.frame_skip)
+        if self.is_train:
+            frame_idx, pos_frame_idx = self.sample_ssl_sequence(self.num_frame, self.num_prev_frames, self.frame_skip)
+        else:
+            pos_frame_idx = frame_idx
+            
         frames = self.idx2clip(frame_idx, video_path)
         pos_frames = self.idx2clip(pos_frame_idx, video_path)
         
