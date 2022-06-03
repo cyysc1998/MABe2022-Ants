@@ -145,6 +145,20 @@ class MoCo(nn.Module):
         model.load_state_dict(pretrained_dict, strict=False)
         return model
 
+    def compute_logits(self, q, k1, k2, k3):
+        l_pos1 = torch.einsum('nc,nc->n', [q, k1]).unsqueeze(-1)
+        l_pos2 = torch.einsum('nc,nc->n', [q, k2]).unsqueeze(-1)
+        l_pos3 = torch.einsum('nc,nc->n', [q, k3]).unsqueeze(-1)
+        l_pos = torch.cat((l_pos1, l_pos2, l_pos3), dim=0)
+
+        # negative logits: NxK
+        l_neg = torch.einsum('nc,ck->nk', [q, self.queue.clone().detach()])
+        l_neg = l_neg.repeat(3, 1)
+        # logits: Nx(1+K)
+        logits = torch.cat([l_pos, l_neg], dim=1)
+
+        return logits
+
     def forward(self, im_q, im_k1, im_k2, im_k3):
         """
         Input:
@@ -181,18 +195,25 @@ class MoCo(nn.Module):
             # split im_k
             k1, k2, k3 = torch.split(k, k.shape[0] // 3, dim=0)
 
-        # compute logits
-        # Einstein sum is more intuitive
-        # positive logits: Nx1
-        l_pos1 = torch.einsum('nc,nc->n', [q, k1]).unsqueeze(-1)
-        l_pos2 = torch.einsum('nc,nc->n', [q, k2]).unsqueeze(-1)
-        l_pos3 = torch.einsum('nc,nc->n', [q, k3]).unsqueeze(-1)
-        l_pos = torch.cat((l_pos1, l_pos2, l_pos3), dim=0)
-        # negative logits: NxK
-        l_neg = torch.einsum('nc,ck->nk', [q, self.queue.clone().detach()])
-        l_neg = l_neg.repeat(3, 1)
-        # logits: Nx(1+K)
-        logits = torch.cat([l_pos, l_neg], dim=1)
+        # # compute logits
+        # # Einstein sum is more intuitive
+        # # positive logits: Nx1
+        # l_pos1 = torch.einsum('nc,nc->n', [q, k1]).unsqueeze(-1)
+        # l_pos2 = torch.einsum('nc,nc->n', [q, k2]).unsqueeze(-1)
+        # l_pos3 = torch.einsum('nc,nc->n', [q, k3]).unsqueeze(-1)
+        # l_pos = torch.cat((l_pos1, l_pos2, l_pos3), dim=0)
+        # # negative logits: NxK
+        # l_neg = torch.einsum('nc,ck->nk', [q, self.queue.clone().detach()])
+        # l_neg = l_neg.repeat(3, 1)
+        # # logits: Nx(1+K)
+        # logits = torch.cat([l_pos, l_neg], dim=1)
+
+        logits = torch.cat([
+            self.compute_logits(q, k1, k2, k3),
+            self.compute_logits(k1, q, k2, k3),
+            self.compute_logits(k2, q, k1, k3),
+            self.compute_logits(k3, q, k1, k2),
+        ], dim=0)
 
         # apply temperature
         logits /= self.T
