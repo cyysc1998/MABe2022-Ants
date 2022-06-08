@@ -51,6 +51,7 @@ class MoCo(nn.Module):
             param_k.requires_grad = False  # not update by gradient
 
         # create the queue
+        self.register_buffer("indice", torch.arange(K))
         self.register_buffer("queue", torch.randn(dim, K))
         self.queue = nn.functional.normalize(self.queue, dim=0)
 
@@ -65,9 +66,10 @@ class MoCo(nn.Module):
             param_k.data = param_k.data * self.m + param_q.data * (1. - self.m)
 
     @torch.no_grad()
-    def _dequeue_and_enqueue(self, keys):
+    def _dequeue_and_enqueue(self, keys, indices):
         # gather keys before updating queue
         keys = concat_all_gather(keys)
+        indices = concat_all_gather(indices)
 
         batch_size = keys.shape[0]
 
@@ -76,6 +78,7 @@ class MoCo(nn.Module):
 
         # replace the keys at ptr (dequeue and enqueue)
         self.queue[:, ptr:ptr + batch_size] = keys.T
+        self.indice[ptr:ptr + batch_size] = indices
         ptr = (ptr + batch_size) % self.K  # move pointer
 
         self.queue_ptr[0] = ptr
@@ -145,7 +148,7 @@ class MoCo(nn.Module):
         model.load_state_dict(pretrained_dict, strict=False)
         return model
 
-    def forward(self, im_q, im_k1, im_k2, im_k3):
+    def forward(self, im_q, im_k1, im_k2, im_k3, indices):
         """
         Input:
             im_q: a batch of query images
@@ -200,8 +203,15 @@ class MoCo(nn.Module):
         # labels: positive key indicators
         labels = torch.zeros(logits.shape[0], dtype=torch.long).cuda()
 
+
+        # compute mask
+        # indices: N, self.indice: K
+        masks = indices[:, None] == self.indice[None, :]
+        masks = torch.cat([labels.unsqueeze(1), masks.repeat(3, 1)], dim=1)
+        logits = logits.masked_fill(masks == 1, float("-inf"))
+
         # dequeue and enqueue
-        self._dequeue_and_enqueue(k1)
+        self._dequeue_and_enqueue(k1, indices)
 
         return logits, labels
 
