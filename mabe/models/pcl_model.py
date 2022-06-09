@@ -17,9 +17,9 @@ from mabe.simclr.modules import LARS
 from mabe.utils import get_root_logger, master_only
 
 
-class MOCOModel(BaseModel):
+class PCLModel(BaseModel):
     def __init__(self, opt):
-        super(MOCOModel, self).__init__(opt)
+        super(PCLModel, self).__init__(opt)
 
         # define network
         self.net = define_network(deepcopy(opt["network"]))

@@ -1,7 +1,7 @@
 # general settings
 # name: debug
-name: 20_multi_ce
-model_type: MOCOModel
+name: 21_pcl_p6k
+model_type: PCLModel
 manual_seed: 0
 cudnn_deterministic: true
 
@@ -19,8 +19,8 @@ datasets:
   train:
     name: train_2859
     type: AntVideoDataset
-    video_dir: '../data/ants/frames_cropped_224'
-    frame_number_map_path: '../data/ants/frame_number_map_training.npy'
+    video_dir: 'data/training_samples'
+    frame_number_map_path: 'data/frame_number_map_training.npy'
     num_frame: *num_frame
     frame_skip: *frame_skip
     num_prev_frames: *num_prev_frames
@@ -36,26 +36,44 @@ datasets:
   val:
     name: val_1948
     type: AntVideoDataset
-    video_dir: '../data/ants/frames_cropped_224'
-    frame_number_map_path: '../data/ants/frame_number_map_testing.npy'
+    video_dir: 'data/training_samples'
+    frame_number_map_path: 'data/frame_number_map_training.npy'
     keypoint_path: '../data/user_train.npy'
     num_frame: *num_frame
     frame_skip: *frame_skip
     num_prev_frames: *num_prev_frames
     num_next_frames: *num_next_frames
     frame_size: *frame_size
-    has_label: true
+    has_label: false
+
+    # data loader
+    batch_size_per_gpu: 225
+    num_worker_per_gpu: 4
+    pin_memory: false
+  
+  test:
+    name: cluster_2859
+    type: AntVideoDataset
+    video_dir: 'data/training_samples'
+    frame_number_map_path: 'data/frame_number_map_training.npy'
+    num_frame: *num_frame
+    frame_skip: *frame_skip
+    num_prev_frames: *num_prev_frames
+    num_next_frames: *num_next_frames
+    frame_size: *frame_size
+    has_label: false
 
     # data loader
     batch_size_per_gpu: 225
     num_worker_per_gpu: 4
     pin_memory: true
-  
-  test:
-    name: test_9491
+
+
+  cluster:
+    name: cluster
     type: AntVideoDataset
-    video_dir: '../data/ants/frames_cropped_224'
-    frame_number_map_path: '../data/ants/frame_number_map_inference.npy'
+    video_dir: 'data/training_samples'
+    frame_number_map_path: 'data/frame_number_map_training.npy'
     num_frame: *num_frame
     frame_skip: *frame_skip
     num_prev_frames: *num_prev_frames
@@ -70,14 +88,16 @@ datasets:
 
 # network structures
 network:
-  type: MoCo
+  type: PCL
   in_channels: 7
   dim: *out_emb_size
   K: 65536
   m: 0.999
-  T: 0.07
+  T: 0.2
   mlp: True
   out_emb_size: *out_emb_size
+  num_cluster: [25000, 50000, 100000]
+  cluster_interval: 500 # determined by interval and warmup iters
 
 # path
 path:

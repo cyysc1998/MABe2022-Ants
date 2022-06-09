@@ -2,9 +2,10 @@
 import torch
 import torch.nn as nn
 import torchvision.models as models
+from random import sample
 
 
-class MoCo(nn.Module):
+class PCL(nn.Module):
     """
     Build a MoCo model with: a query encoder, a key encoder, and a queue
     https://arxiv.org/abs/1911.05722
@@ -16,7 +17,7 @@ class MoCo(nn.Module):
         m: moco momentum of updating key encoder (default: 0.999)
         T: softmax temperature (default: 0.07)
         """
-        super(MoCo, self).__init__()
+        super(PCL, self).__init__()
 
         dim = opt["dim"]
         K = opt["K"]
@@ -159,7 +160,7 @@ class MoCo(nn.Module):
 
         return logits
 
-    def forward(self, im_q, im_k1, im_k2, im_k3):
+    def forward(self, im_q, im_k1, im_k2, im_k3, is_eval=False, cluster_result=None, index=None):
         """
         Input:
             im_q: a batch of query images
@@ -178,8 +179,8 @@ class MoCo(nn.Module):
 
         # compute key features
         with torch.no_grad():  # no gradient to keys
+            # import pdb; pdb.set_trace()
             self._momentum_update_key_encoder()  # update the key encoder
-
             # concat all im_k
             im_k = torch.cat((im_k1, im_k2, im_k3), dim=0)
 
@@ -209,7 +210,38 @@ class MoCo(nn.Module):
         # dequeue and enqueue
         self._dequeue_and_enqueue(k1)
 
-        return logits, labels
+        # prototypical contrast
+        if cluster_result is not None:  
+            proto_labels = []
+            proto_logits = []
+            for n, (im2cluster,prototypes,density) in enumerate(zip(cluster_result['im2cluster'],cluster_result['centroids'],cluster_result['density'])):
+                # get positive prototypes
+                pos_proto_id = im2cluster[index]
+                pos_prototypes = prototypes[pos_proto_id]    
+                
+                # sample negative prototypes
+                all_proto_id = [i for i in range(im2cluster.max()+1)]       
+                neg_proto_id = set(all_proto_id)-set(pos_proto_id.tolist())
+                neg_proto_id = sample(neg_proto_id,self.r) #sample r negative prototypes 
+                neg_prototypes = prototypes[neg_proto_id]    
+
+                proto_selected = torch.cat([pos_prototypes,neg_prototypes],dim=0)
+                
+                # compute prototypical logits
+                logits_proto = torch.mm(q,proto_selected.t())
+                
+                # targets for prototype assignment
+                labels_proto = torch.linspace(0, q.size(0)-1, steps=q.size(0)).long().cuda()
+                
+                # scaling temperatures for the selected prototypes
+                temp_proto = density[torch.cat([pos_proto_id,torch.LongTensor(neg_proto_id).cuda()],dim=0)]  
+                logits_proto /= temp_proto
+                
+                proto_labels.append(labels_proto)
+                proto_logits.append(logits_proto)
+            return logits, labels, proto_logits, proto_labels
+        else:
+            return logits, labels, None, None
 
 
 # utils
