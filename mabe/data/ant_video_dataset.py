@@ -70,7 +70,7 @@ class AntVideoDataset(torch.utils.data.Dataset):
         ret.update({"x1_b": self.crop(full_frames, [x2, y2], size=112)})
         pos_y1, pos_x1, pos_y2, pos_x2 = pos_frame_keypoints
         ret.update({"x2_a": self.crop(full_pos_frames, [pos_x1, pos_y1], size=112)})
-        ret.update({"x2_b": self.crop(full_pos_frames, [pos_x1, pos_y1], size=112)})
+        ret.update({"x2_b": self.crop(full_pos_frames, [pos_x2, pos_y2], size=112)})
         ret.update({"seq_id": video_idx})
         
 

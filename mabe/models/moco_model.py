@@ -92,6 +92,8 @@ class MOCOModel(BaseModel):
         x12_b = torch.cat([x1_b, x2_b], dim=0)
         x1 = x1.float() / 255.0
         x2 = x2.float() / 255.0
+        x12_a = x12_a.float() / 255.0
+        x12_b = x12_b.float() / 255.0
         if train:
             self.x11 = self.transform_train(x1)
             self.x12 = self.transform_train_td(x1)
