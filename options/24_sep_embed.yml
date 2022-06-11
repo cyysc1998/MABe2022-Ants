@@ -1,6 +1,6 @@
 # general settings
 # name: debug
-name: 21_sample_t
+name: 24_sep_embed
 model_type: MOCOModel
 manual_seed: 0
 cudnn_deterministic: true
@@ -50,7 +50,7 @@ datasets:
     # data loader
     batch_size_per_gpu: 225
     num_worker_per_gpu: 4
-    pin_memory: true
+    pin_memory: false
   
   test:
     name: test_9491
@@ -105,7 +105,7 @@ train:
 
 # validation settings
 val:
-  val_freq: 2000
+  val_freq: *total_iter
   st_iter: 0
   ed_iter: *total_iter
 
@@ -114,7 +114,7 @@ test:
   test_freq: 42000
   st_iter: 42000
   ed_iter: *total_iter
-  iter_list: [6000, 12000]
+  iter_list: [6000, 12000, 24000, 40000, 50000]
 
 # linear evaluation settings
 linear_eval:

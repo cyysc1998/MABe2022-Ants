@@ -36,6 +36,8 @@ class AntVideoDataset(torch.utils.data.Dataset):
         frame_nums = np.array([self.frame_number_map[k] for k in self.video_names])
         assert np.all(np.diff(frame_nums[:, 0]) > 0), "Frame number map is not sorted"
 
+        self.keypoints = np.load(opt["keypoint_path"], allow_pickle=True).item()
+
         # labels
         self.labels = None
         if self.has_label:
@@ -53,12 +55,22 @@ class AntVideoDataset(torch.utils.data.Dataset):
         video_name = self.video_names[video_idx]
         video_path = os.path.join(self.video_dir, video_name)
         
-        frames = self.idx2clip(frame_idx, video_path)
+        frames = self.idx2clip(frame_idx, video_path, is_full=False)
+        full_frames = self.idx2clip(frame_idx, video_path, is_full=True)
         pos_frame_idx = self.sample_clip_idx(frame_idx)
-        pos_frames = self.idx2clip(pos_frame_idx, video_path)
+        pos_frames = self.idx2clip(pos_frame_idx, video_path, is_full=False)
+        full_pos_frames = self.idx2clip(pos_frame_idx, video_path, is_full=True)
         
         ret.update({"x1": frames})
         ret.update({"x2": pos_frames})
+        frame_keypoints = self.keypoints[video_name]["keypoints"][frame_idx-1]
+        pos_frame_keypoints = self.keypoints[video_name]["keypoints"][pos_frame_idx-1]
+        y1, x1, y2, x2 = frame_keypoints
+        ret.update({"x1_a": self.crop(full_frames, [x1, y1], size=112)})
+        ret.update({"x1_b": self.crop(full_frames, [x2, y2], size=112)})
+        pos_y1, pos_x1, pos_y2, pos_x2 = pos_frame_keypoints
+        ret.update({"x2_a": self.crop(full_pos_frames, [pos_x1, pos_y1], size=112)})
+        ret.update({"x2_b": self.crop(full_pos_frames, [pos_x1, pos_y1], size=112)})
         ret.update({"seq_id": video_idx})
         
 
@@ -79,7 +91,7 @@ class AntVideoDataset(torch.utils.data.Dataset):
         return pos_idx
 
     
-    def idx2clip(self, frame_idx, video_path):
+    def idx2clip(self, frame_idx, video_path, is_full=False):
         indices = np.array(
             list(
                 range(
@@ -92,11 +104,34 @@ class AntVideoDataset(torch.utils.data.Dataset):
         
         frames = []
         for fnum in indices:
-            frame_path = os.path.join(video_path, f"{fnum}.jpg")
+            if not is_full:
+                frame_path = os.path.join(video_path, f"{fnum}.jpg")
+            else:
+                frame_path = os.path.join(video_path, f"{fnum}_full.jpg")
             frame = read_image(frame_path, mode=ImageReadMode.GRAY)
             frames.append(frame)
         frames = torch.cat(frames)
         return frames
+
+
+    def crop(self, frame, center, size=112):
+        """
+        Crop the frame with the given center and size
+        frame 7 * W * H
+        center (y, x)
+        """
+        center = np.array(center) * 512
+        y1, x1 = center[0] - size // 2, center[1] - size // 2
+        y2, x2 = y1 + size, x1 + size
+        x1, y1 = max(0, x1), max(0, y1)
+        x2, y2 = min(frame.shape[1], x2), min(frame.shape[2], y2)
+        x1, y1, x2, y2 = int(x1), int(y1), int(x2), int(y2)
+        crop_frame = frame[:, x1:x2, y1:y2].float()
+        crop_frame = torch.nn.functional.interpolate(
+            crop_frame.unsqueeze(0), size=size, mode="bilinear", align_corners=False
+        )[0]
+        return crop_frame
+        
         
 
 

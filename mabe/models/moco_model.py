@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from mabe.archs import define_network
 from mabe.data.transform import TransformsSimCLR
-from mabe.losses import info_nce_loss, cross_entropy_loss
+from mabe.losses import info_nce_loss, cross_entropy_loss, cross_entropy_loss_base
 from mabe.models.base_model import BaseModel
 from mabe.simclr.modules import LARS
 from mabe.utils import get_root_logger, master_only
@@ -84,6 +84,12 @@ class MOCOModel(BaseModel):
         self.seq_id = data["seq_id"].to(self.device, non_blocking=True)
         x1 = data["x1"].to(self.device, non_blocking=True)
         x2 = data["x2"].to(self.device, non_blocking=True)
+        x1_a = data["x1_a"].to(self.device, non_blocking=True)
+        x1_b = data["x1_b"].to(self.device, non_blocking=True)
+        x2_a = data["x2_a"].to(self.device, non_blocking=True)
+        x2_b = data["x2_b"].to(self.device, non_blocking=True)
+        x12_a = torch.cat([x1_a, x2_a], dim=0)
+        x12_b = torch.cat([x1_b, x2_b], dim=0)
         x1 = x1.float() / 255.0
         x2 = x2.float() / 255.0
         if train:
@@ -91,11 +97,15 @@ class MOCOModel(BaseModel):
             self.x12 = self.transform_train_td(x1)
             self.x21 = self.transform_train(x2)
             self.x22 = self.transform_train_td(x2)
+            self.x12_a = self.transform_train(x12_a)
+            self.x12_b = self.transform_train(x12_b)
         else:
             self.x1 = self.transform_val(x1)
             self.x2 = self.x1
             self.x3 = self.x1
             self.x4 = self.x1
+            self.x12_a = self.x1
+            self.x12_b = self.x1
         if "label" in data:
             self.label = data["label"].to(self.device, non_blocking=True)
 
@@ -106,13 +116,21 @@ class MOCOModel(BaseModel):
             l_total = 0
             loss_dict = OrderedDict()
             
-            logits, labels = self.net(self.x11, self.x12, self.x21, self.x22)
+            logits, labels, logits1, logits2 = self.net(self.x11, self.x12, self.x21, self.x22, self.x12_a, self.x12_b)
             l_intra, l_inter = cross_entropy_loss(logits, labels, inter_split=logits.shape[0] // 3)
+            l_patch = cross_entropy_loss_base(logits1,
+                    torch.arange(logits1.shape[0]).to(self.device, non_blocking=True)
+                ) + \
+                cross_entropy_loss_base(logits2,
+                    torch.arange(logits2.shape[0]).to(self.device, non_blocking=True)
+                )
             l_total += l_intra
             loss_dict["l_intra"] = l_intra
             l_inter = l_inter * 1
             l_total += l_inter
             loss_dict["l_inter"] = l_inter
+            l_total += l_patch
+            loss_dict["l_patch"] = l_patch
             # loss_dict["temperature"] = self.net.module.T
 
         self.scaler.scale(l_total).backward()
@@ -173,7 +191,7 @@ class MOCOModel(BaseModel):
             self.feed_data(data, train=False)
             idxs.append(self.idx)
 
-            output = self.net(self.x1, self.x2, self.x3, self.x4)
+            output = self.net(self.x1, self.x2, self.x3, self.x4, self.x12_a, self.x12_b)
             feat = output
             feats.append(feat)
 

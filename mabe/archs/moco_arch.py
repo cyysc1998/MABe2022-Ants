@@ -145,7 +145,7 @@ class MoCo(nn.Module):
         model.load_state_dict(pretrained_dict, strict=False)
         return model
 
-    def forward(self, im_q, im_k1, im_k2, im_k3):
+    def forward(self, im_q, im_k1, im_k2, im_k3, patch1, patch2):
         """
         Input:
             im_q: a batch of query images
@@ -158,9 +158,22 @@ class MoCo(nn.Module):
         q = self.encoder_q(im_q)  # queries: NxC
         q = nn.functional.normalize(q, dim=1)
 
+
         # test
         if not self.training:
             return q
+
+
+        # compute patch features
+        p1 = self.encoder_k(patch1)
+        p2 = self.encoder_k(patch2)
+        p1 = nn.functional.normalize(p1, dim=1)
+        p2 = nn.functional.normalize(p2, dim=1)
+        p1_gather = concat_all_gather(p1)
+        p2_gather = concat_all_gather(p2)
+        logits1 = p1_gather @ p2_gather.transpose(1, 0) / self.T
+        logits2 = p2_gather @ p1_gather.transpose(1, 0) / self.T
+
 
         # compute key features
         with torch.no_grad():  # no gradient to keys
@@ -203,7 +216,7 @@ class MoCo(nn.Module):
         # dequeue and enqueue
         self._dequeue_and_enqueue(k1)
 
-        return logits, labels
+        return logits, labels, logits1, logits2
 
 
 # utils
