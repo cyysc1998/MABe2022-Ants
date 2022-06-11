@@ -77,7 +77,7 @@ network:
   dim: *out_emb_size
   K: 65536
   m: 0.999
-  T: 0.2
+  T: 0.07
   mlp: True
   out_emb_size: *out_emb_size
 

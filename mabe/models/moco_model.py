@@ -112,13 +112,14 @@ class MOCOModel(BaseModel):
             self.label = data["label"].to(self.device, non_blocking=True)
 
     def optimize_parameters_amp(self, current_iter):
+        T = lambda x: 0.07 if x < 25000 else 0.2
         self.optimizer.zero_grad()
 
         with autocast():
             l_total = 0
             loss_dict = OrderedDict()
             
-            logits, labels, logits1, logits2 = self.net(self.x11, self.x12, self.x21, self.x22, self.x12_a, self.x12_b)
+            logits, labels, logits1, logits2 = self.net(self.x11, self.x12, self.x21, self.x22, self.x12_a, self.x12_b, T(current_iter))
             l_intra, l_inter = cross_entropy_loss(logits, labels, inter_split=logits.shape[0] // 3)
             l_patch = cross_entropy_loss_base(logits1,
                     torch.arange(logits1.shape[0]).to(self.device, non_blocking=True)
@@ -133,7 +134,7 @@ class MOCOModel(BaseModel):
             loss_dict["l_inter"] = l_inter
             l_total += l_patch
             loss_dict["l_patch"] = l_patch
-            # loss_dict["temperature"] = self.net.module.T
+            loss_dict["temperature"] = torch.tensor(T(current_iter)).cuda()
 
         self.scaler.scale(l_total).backward()
         # self.scaler.unscale_(self.optimizer)
