@@ -173,7 +173,7 @@ class MOCOModel(BaseModel):
             self.feed_data(data, train=False)
             idxs.append(self.idx)
 
-            output = self.net(self.x1, self.x2, self.x3, self.x4)
+            output = self.net(self.x1, self.x2, self.x3, self.x4, self.seq_id)
             feat = output
             feats.append(feat)
 
