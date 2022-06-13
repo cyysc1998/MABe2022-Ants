@@ -145,7 +145,7 @@ class MoCo(nn.Module):
         model.load_state_dict(pretrained_dict, strict=False)
         return model
 
-    def forward(self, im_q, im_k1, im_k2, im_k3, patch1, patch2, temperature):
+    def forward(self, im_q, im_k1, im_k2, im_k3, patch, temperature):
         """
         Input:
             im_q: a batch of query images
@@ -164,15 +164,26 @@ class MoCo(nn.Module):
             return q
 
 
-        # compute patch features
-        p1 = self.encoder_k(patch1)
-        p2 = self.encoder_k(patch2)
-        p1 = nn.functional.normalize(p1, dim=1)
-        p2 = nn.functional.normalize(p2, dim=1)
-        p1_gather = concat_all_gather(p1)
-        p2_gather = concat_all_gather(p2)
-        logits1 = p1_gather @ p2_gather.transpose(1, 0) / temperature
-        logits2 = p2_gather @ p1_gather.transpose(1, 0) / temperature
+        # compute patch features a
+        p1_a = self.encoder_k(patch['x1_a'])
+        p2_a = self.encoder_k(patch['x2_a'])
+        p1_a = nn.functional.normalize(p1_a, dim=1)
+        p2_a = nn.functional.normalize(p2_a, dim=1)
+        p1_a_gather = concat_all_gather(p1_a)
+        p2_a_gather = concat_all_gather(p2_a)
+        logits_a1 = p1_a_gather @ p2_a_gather.transpose(1, 0) / temperature
+        logits_a2 = p2_a_gather @ p1_a_gather.transpose(1, 0) / temperature
+
+
+        # compute patch features b
+        p1_b = self.encoder_k(patch['x1_b'])
+        p2_b = self.encoder_k(patch['x2_b'])
+        p1_b = nn.functional.normalize(p1_b, dim=1)
+        p2_b = nn.functional.normalize(p2_b, dim=1)
+        p1_b_gather = concat_all_gather(p1_b)
+        p2_b_gather = concat_all_gather(p2_b)
+        logits_b1 = p1_b_gather @ p2_b_gather.transpose(1, 0) / temperature
+        logits_b2 = p2_b_gather @ p1_b_gather.transpose(1, 0) / temperature
 
 
         # compute key features
@@ -216,7 +227,7 @@ class MoCo(nn.Module):
         # dequeue and enqueue
         self._dequeue_and_enqueue(k1)
 
-        return logits, labels, logits1, logits2
+        return logits, labels, logits_a1, logits_a2, logits_b1, logits_b2
 
 
 # utils
