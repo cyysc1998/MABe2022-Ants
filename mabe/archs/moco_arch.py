@@ -24,7 +24,7 @@ class MoCo(nn.Module):
         T = opt["T"]
         mlp = opt["mlp"]
         in_channels = opt["in_channels"]
-        base_encoder = models.__dict__["resnet50"]
+        base_encoder = models.__dict__["resnet18"]
 
         self.K = K
         self.m = m
@@ -34,7 +34,7 @@ class MoCo(nn.Module):
         # num_classes is the output fc dimension
         self.encoder_q = base_encoder(num_classes=dim)
         self.encoder_k = base_encoder(num_classes=dim)
-        model_url = "https://download.pytorch.org/models/resnet50-19c8e357.pth"
+        model_url = "https://download.pytorch.org/models/resnet18-5c106cde.pth"
         self.encoder_q = self.load_pretrained_weights(self.encoder_q, model_url)
         self.encoder_k = self.load_pretrained_weights(self.encoder_k, model_url)
         self.encoder_q = self.modify_input_for_moco(self.encoder_q, in_channels)
