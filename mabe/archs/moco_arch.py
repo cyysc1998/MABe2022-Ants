@@ -4,6 +4,20 @@ import torch.nn as nn
 import torchvision.models as models
 
 
+
+model_list = {
+    'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
+    'resnet34': 'https://download.pytorch.org/models/resnet34-333f7ec4.pth',
+    'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
+    'resnet101': 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth',
+    'resnet152': 'https://download.pytorch.org/models/resnet152-b121ed2d.pth',
+    'resnext50_32x4d': 'https://download.pytorch.org/models/resnext50_32x4d-7cdf4587.pth',
+    'resnext101_32x8d': 'https://download.pytorch.org/models/resnext101_32x8d-8ba56ff5.pth',
+    'wide_resnet50_2': 'https://download.pytorch.org/models/wide_resnet50_2-95faca4d.pth',
+    'wide_resnet101_2': 'https://download.pytorch.org/models/wide_resnet101_2-32ee1156.pth',
+}
+
+
 class MoCo(nn.Module):
     """
     Build a MoCo model with: a query encoder, a key encoder, and a queue
@@ -24,7 +38,8 @@ class MoCo(nn.Module):
         T = opt["T"]
         mlp = opt["mlp"]
         in_channels = opt["in_channels"]
-        base_encoder = models.__dict__["resnet50"]
+        model_name = opt["backbone"]
+        base_encoder = models.__dict__[model_name]
 
         self.K = K
         self.m = m
@@ -34,7 +49,7 @@ class MoCo(nn.Module):
         # num_classes is the output fc dimension
         self.encoder_q = base_encoder(num_classes=dim)
         self.encoder_k = base_encoder(num_classes=dim)
-        model_url = "https://download.pytorch.org/models/resnet50-19c8e357.pth"
+        model_url = model_list[model_name]
         self.encoder_q = self.load_pretrained_weights(self.encoder_q, model_url)
         self.encoder_k = self.load_pretrained_weights(self.encoder_k, model_url)
         self.encoder_q = self.modify_input_for_moco(self.encoder_q, in_channels)
@@ -157,13 +172,17 @@ class MoCo(nn.Module):
             logits, targets
         """
 
+        # test
+        if not self.training:
+            q = self.encoder_k(im_q)  # queries: NxC
+            q = nn.functional.normalize(q, dim=1)
+            return q
+
         # compute query features
         q = self.encoder_q(im_q)  # queries: NxC
         q = nn.functional.normalize(q, dim=1)
 
-        # test
-        if not self.training:
-            return q
+        
 
         # compute key features
         with torch.no_grad():  # no gradient to keys
