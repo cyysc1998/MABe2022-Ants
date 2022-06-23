@@ -3,6 +3,7 @@ from collections import OrderedDict
 from copy import deepcopy
 
 import numpy as np
+import random
 import torch
 import torch.distributed as dist
 from torch.cuda.amp import GradScaler
@@ -77,6 +78,12 @@ class MOCOModel(BaseModel):
         else:
             raise NotImplementedError(f"optimizer {optim_type} is not supperted yet.")
         self.optimizers.append(self.optimizer)
+        
+    def be(self, seq, gamma):
+        rand_index = random.randint(seq.shape[0])
+        t = random.uniform(0, gamma)
+        seq = (1 - t) * seq + t * seq[rand_index]
+        return seq
 
     def feed_data(self, data, train):
         self.idx = data["idx"].to(self.device, non_blocking=True)
@@ -86,16 +93,23 @@ class MOCOModel(BaseModel):
         x2 = data["x2"].to(self.device, non_blocking=True)
         x1 = x1.float() / 255.0
         x2 = x2.float() / 255.0
+        
+        if train:
+            rand_index = random.randint(0, x1.shape[0] - 1)
+            t = random.uniform(0, 0.3)
+            x1 = (1 - t) * x1 + t * x1[rand_index]
+            x2 = (1 - t) * x2 + t * x1[rand_index]
+        
         if train:
             self.x11 = self.transform_train(x1)
             self.x12 = self.transform_train_td(x1)
             self.x21 = self.transform_train(x2)
             self.x22 = self.transform_train_td(x2)
         else:
-            self.x1 = self.transform_val(x1)
-            self.x2 = self.x1
-            self.x3 = self.x1
-            self.x4 = self.x1
+            self.x11 = self.transform_val(x1)
+            self.x12 = self.x11
+            self.x21 = self.x11
+            self.x22 = self.x11
         if "label" in data:
             self.label = data["label"].to(self.device, non_blocking=True)
 
@@ -173,7 +187,7 @@ class MOCOModel(BaseModel):
             self.feed_data(data, train=False)
             idxs.append(self.idx)
 
-            output = self.net(self.x1, self.x2, self.x3, self.x4)
+            output = self.net(self.x11, self.x12, self.x21, self.x22, self.seq_id)
             feat = output
             feats.append(feat)
 
