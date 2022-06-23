@@ -26,6 +26,7 @@ class MoCo(nn.Module):
         in_channels = opt["in_channels"]
         base_encoder = models.__dict__["resnet50"]
 
+        self.supervised_weight = opt["supervised_weight"]
         self.K = K
         self.m = m
         self.T = T
@@ -45,6 +46,22 @@ class MoCo(nn.Module):
             dim_mlp = self.encoder_q.fc.weight.shape[1]
             self.encoder_q.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder_q.fc)
             self.encoder_k.fc = nn.Sequential(nn.Linear(dim_mlp, dim_mlp), nn.ReLU(), self.encoder_k.fc)
+
+
+        if len(self.supervised_weight) != 0:
+            self.head1 = nn.Sequential(
+                nn.Linear(dim, 2),
+                nn.Softmax(dim=1)
+            )
+            self.head2 = nn.Sequential(
+                nn.Linear(dim, 2),
+                nn.Softmax(dim=1)
+            )
+            self.head3 = nn.Sequential(
+                nn.Linear(dim, 2),
+                nn.Softmax(dim=1)
+            )
+
 
         for param_q, param_k in zip(self.encoder_q.parameters(), self.encoder_k.parameters()):
             param_k.data.copy_(param_q.data)  # initialize
@@ -156,14 +173,25 @@ class MoCo(nn.Module):
         Output:
             logits, targets
         """
+        # test
+        if not self.training:
+            q = self.encoder_k(im_q)  # queries: NxC
+            q = nn.functional.normalize(q, dim=1)
+            return q
 
         # compute query features
         q = self.encoder_q(im_q)  # queries: NxC
         q = nn.functional.normalize(q, dim=1)
 
-        # test
-        if not self.training:
-            return q
+        subtask_logits = []
+        if len(self.supervised_weight) != 0:
+            subtask1_logit = self.supervised_weight[0] * self.head1(q)
+            subtask2_logit = self.supervised_weight[1] * self.head2(q)
+            subtask3_logit = self.supervised_weight[2] * self.head3(q)
+            subtask_logits.append(subtask1_logit)
+            subtask_logits.append(subtask2_logit)
+            subtask_logits.append(subtask3_logit)
+        
 
         # compute key features
         with torch.no_grad():  # no gradient to keys
@@ -213,7 +241,7 @@ class MoCo(nn.Module):
         # dequeue and enqueue
         self._dequeue_and_enqueue(k1, indices)
 
-        return logits, labels
+        return logits, labels, subtask_logits
 
 
 # utils

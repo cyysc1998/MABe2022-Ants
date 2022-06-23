@@ -4,6 +4,7 @@ from copy import deepcopy
 
 import numpy as np
 import torch
+import torch.nn as nn
 import torch.distributed as dist
 from torch.cuda.amp import GradScaler
 from torch.cuda.amp import autocast as autocast
@@ -11,7 +12,7 @@ from tqdm import tqdm
 
 from mabe.archs import define_network
 from mabe.data.transform import TransformsSimCLR
-from mabe.losses import info_nce_loss, cross_entropy_loss
+from mabe.losses import info_nce_loss, cross_entropy_loss, cross_entropy
 from mabe.models.base_model import BaseModel
 from mabe.simclr.modules import LARS
 from mabe.utils import get_root_logger, master_only
@@ -92,12 +93,12 @@ class MOCOModel(BaseModel):
             self.x21 = self.transform_train(x2)
             self.x22 = self.transform_train_td(x2)
         else:
-            self.x1 = self.transform_val(x1)
-            self.x2 = self.x1
-            self.x3 = self.x1
-            self.x4 = self.x1
+            self.x11 = self.transform_val(x1)
+            self.x12 = self.x11
+            self.x21 = self.x11
+            self.x22 = self.x11
         if "label" in data:
-            self.label = data["label"].to(self.device, non_blocking=True)
+            self.label = data["label"].to(self.device, non_blocking=True).long()
 
     def optimize_parameters_amp(self, current_iter):
         self.optimizer.zero_grad()
@@ -106,13 +107,21 @@ class MOCOModel(BaseModel):
             l_total = 0
             loss_dict = OrderedDict()
             
-            logits, labels = self.net(self.x11, self.x12, self.x21, self.x22, self.seq_id)
+            logits, labels, subtask_logits = self.net(self.x11, self.x12, self.x21, self.x22, self.seq_id)
             l_intra, l_inter = cross_entropy_loss(logits, labels, inter_split=logits.shape[0] // 3)
             l_total += l_intra
             loss_dict["l_intra"] = l_intra
             l_inter = l_inter * 1
             l_total += l_inter
             loss_dict["l_inter"] = l_inter
+            if len(subtask_logits) != 0:
+                loss_1 = cross_entropy(subtask_logits[0], self.label.T[0])
+                loss_2 = cross_entropy(subtask_logits[1], self.label.T[1])
+                loss_3 = cross_entropy(subtask_logits[2], self.label.T[2])
+                l_total += (loss_1 + loss_2 + loss_3)
+                loss_dict["loss_1"] = loss_1
+                loss_dict["loss_2"] = loss_2
+                loss_dict["loss_3"] = loss_3
             # loss_dict["temperature"] = self.net.module.T
 
         self.scaler.scale(l_total).backward()
@@ -173,7 +182,7 @@ class MOCOModel(BaseModel):
             self.feed_data(data, train=False)
             idxs.append(self.idx)
 
-            output = self.net(self.x1, self.x2, self.x3, self.x4)
+            output = self.net(self.x11, self.x12, self.x21, self.x22, self.seq_id)
             feat = output
             feats.append(feat)
 

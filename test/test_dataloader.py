@@ -2,21 +2,33 @@ from tqdm import tqdm
 
 from mabe.data import create_dataloader, create_dataset
 from mabe.utils import parse
+import numpy as np
+import torch
+from torch.utils.data import DataLoader
+from torch.utils.data.distributed import DistributedSampler
 
 phase = "train"
-opt = parse("options/00_baseline.yml")
-dataset_opt = opt["datasets"]["train"]
+opt = parse("options/31_supervised.yml")
+dataset_opt = opt["datasets"]["val"]
 dataset_opt.update({"phase": phase})
 train_set = create_dataset(dataset_opt)
-train_loader = create_dataloader(
-    train_set, dataset_opt, seed=opt["manual_seed"], phase=phase
-)
+# sampler = DistributedSampler(train_set, shuffle=False)
+# train_loader = create_dataloader(
+#     train_set, dataset_opt, seed=opt["manual_seed"], sampler=None
+# )
+train_loader = DataLoader(train_set, 128, False)
+num_nan = 0
 for idx, data in tqdm(enumerate(train_loader)):
     # print(idx)
     # for k, v in data.items():
     #     print(k, v.shape)
     # break
-    pass
+    label = data["label"]
+    if torch.isnan(label).any():
+        print(label)
+        break
+    # num_nan += (label == np.nan).sum()
+    # print(num_nan)
 
 """
 bs=128, num_workers=64
