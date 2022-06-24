@@ -123,7 +123,7 @@ class MOCOModel(BaseModel):
             self.label = data["label"].to(self.device, non_blocking=True)
 
     def optimize_parameters_amp(self, current_iter):
-        T = lambda x: 0.07 if x < 25000 else 0.2
+        T = lambda x: 0.07 if x < 25000 else 0.07
         self.optimizer.zero_grad()
 
         with autocast():
@@ -218,7 +218,7 @@ class MOCOModel(BaseModel):
             self.feed_data(data, train=False)
             idxs.append(self.idx)
 
-            output = self.net(self.x1, self.x2, self.x3, self.x4, self.x12_a, self.x12_b)
+            output = self.net(self.x1, self.x2, self.x3, self.x4, self.x1, self.x1)
             feat = output
             feats.append(feat)
 

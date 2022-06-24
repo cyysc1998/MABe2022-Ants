@@ -166,7 +166,7 @@ class MoCo(nn.Module):
 
         # compute patch features a
         p1_a = self.encoder_k(patch['x1_a'])
-        p2_a = self.encoder_k(patch['x2_a'])
+        p2_a = self.encoder_k(patch['x1_b'])
         p1_a = nn.functional.normalize(p1_a, dim=1)
         p2_a = nn.functional.normalize(p2_a, dim=1)
         p1_a_gather = concat_all_gather(p1_a)
@@ -176,7 +176,7 @@ class MoCo(nn.Module):
 
 
         # compute patch features b
-        p1_b = self.encoder_k(patch['x1_b'])
+        p1_b = self.encoder_k(patch['x2_a'])
         p2_b = self.encoder_k(patch['x2_b'])
         p1_b = nn.functional.normalize(p1_b, dim=1)
         p2_b = nn.functional.normalize(p2_b, dim=1)
