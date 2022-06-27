@@ -81,19 +81,19 @@ def extract_frames(path):
     cap.release()
 
 
-# for path in tqdm(paths):
-#     extract_frames(path)
-# pbar = tqdm(total=len(paths))
-# update = lambda *args: pbar.update()
-# pool = multiprocessing.Pool(64)
-# for path in paths:
-#     pool.apply_async(extract_frames, (path,), callback=update)
-# print("Start")
-# pool.close()
-# pool.join()
-# print("Done")
+for path in tqdm(paths):
+    extract_frames(path)
+pbar = tqdm(total=len(paths))
+update = lambda *args: pbar.update()
+pool = multiprocessing.Pool(64)
+for path in paths:
+    pool.apply_async(extract_frames, (path,), callback=update)
+print("Start")
+pool.close()
+pool.join()
+print("Done")
 
 
-path = f"{root}/video_clips_512/ee7d67579ebcc9c49e7e.avi"
+# path = f"{root}/video_clips_512/ee7d67579ebcc9c49e7e.avi"
 
-extract_frames(path)
+# extract_frames(path)
