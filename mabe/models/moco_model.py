@@ -92,10 +92,10 @@ class MOCOModel(BaseModel):
             self.x21 = self.transform_train(x2)
             self.x22 = self.transform_train_td(x2)
         else:
-            self.x1 = self.transform_val(x1)
-            self.x2 = self.x1
-            self.x3 = self.x1
-            self.x4 = self.x1
+            self.x11 = self.transform_val(x1)
+            self.x12 = self.x11
+            self.x21 = self.x11
+            self.x22 = self.x11
         if "label" in data:
             self.label = data["label"].to(self.device, non_blocking=True)
 
@@ -110,7 +110,7 @@ class MOCOModel(BaseModel):
             l_intra, l_inter = cross_entropy_loss(logits, labels, inter_split=logits.shape[0] // 3)
             l_total += l_intra
             loss_dict["l_intra"] = l_intra
-            l_inter = l_inter * 1
+            l_inter = l_inter * 0.1
             l_total += l_inter
             loss_dict["l_inter"] = l_inter
             # loss_dict["temperature"] = self.net.module.T
@@ -173,7 +173,7 @@ class MOCOModel(BaseModel):
             self.feed_data(data, train=False)
             idxs.append(self.idx)
 
-            output = self.net(self.x1, self.x2, self.x3, self.x4)
+            output = self.net(self.x11, self.x12, self.x21, self.x22, self.seq_id)
             feat = output
             feats.append(feat)
 
