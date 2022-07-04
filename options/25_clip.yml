@@ -1,6 +1,6 @@
 # general settings
 # name: debug
-name: 25_clip_p6k
+name: 25_clip
 model_type: MOCOModel
 manual_seed: 0
 cudnn_deterministic: true
@@ -19,8 +19,8 @@ datasets:
   train:
     name: train_2859
     type: AntVideoDataset
-    video_dir: 'data/training_samples'
-    frame_number_map_path: 'data/frame_number_map_training.npy'
+    video_dir: '../data/ants/frames_cropped_224'
+    frame_number_map_path: '../data/ants/frame_number_map_training.npy'
     num_frame: *num_frame
     frame_skip: *frame_skip
     num_prev_frames: *num_prev_frames
@@ -36,8 +36,8 @@ datasets:
   val:
     name: val_1948
     type: AntVideoDataset
-    video_dir: 'data/training_samples'
-    frame_number_map_path: 'data/frame_number_map_training.npy'
+    video_dir: '../data/ants/frames_cropped_224'
+    frame_number_map_path: '../data/ants/frame_number_map_testing.npy'
     keypoint_path: '../data/user_train.npy'
     num_frame: *num_frame
     frame_skip: *frame_skip
@@ -54,8 +54,8 @@ datasets:
   test:
     name: test_9491
     type: AntVideoDataset
-    video_dir: 'data/training_samples'
-    frame_number_map_path: 'data/frame_number_map_training.npy'
+    video_dir: '../data/ants/frames_cropped_224'
+    frame_number_map_path: '../data/ants/frame_number_map_inference.npy'
     num_frame: *num_frame
     frame_skip: *frame_skip
     num_prev_frames: *num_prev_frames
@@ -112,7 +112,7 @@ test:
   test_freq: *total_iter
   st_iter: 0
   ed_iter: *total_iter
-  iter_list: []
+  iter_list: [50000, 40000, 30000, 20000, 6000]
 
 # linear evaluation settings
 linear_eval:
