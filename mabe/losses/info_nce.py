@@ -33,8 +33,7 @@ def info_nce_loss(x_list):
     N = x_list[0].shape[0]
 
     # create logits
-    temperature = 0.07
-    logits = nn.CosineSimilarity(dim=2)(x.unsqueeze(1), x.unsqueeze(0)) / temperature
+    logits = nn.CosineSimilarity(dim=2)(x.unsqueeze(1), x.unsqueeze(0))
 
     # create labels
     labels = torch.eye(M * N)

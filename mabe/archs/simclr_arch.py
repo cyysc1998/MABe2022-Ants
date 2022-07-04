@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torchvision
+import math
+import numpy as np
 from mabe.simclr import SimCLR as simclr
 
 
@@ -24,10 +26,11 @@ class SimCLR(nn.Module):
         )
         n_features = encoder.fc.in_features
         self.encoder = simclr(encoder, out_emb_size, n_features)
-        self.temperature = nn.Parameter(torch.ones(()), requires_grad=True)
+        # self.temperature = torch.sqrt(nn.Parameter(torch.ones([]) * np.log(1 / 0.07), requires_grad=True))
+        self.temperature = nn.Parameter(torch.sqrt(torch.ones(()) * math.log(1 / 0.07)), requires_grad=True)
+        
 
     def forward(self, x_list):
         z_list = self.encoder(x_list)
-        # z1 = z1 * self.temperature
-        # z2 = z2 * self.temperature
+        z_list = [z * self.temperature for z in z_list]
         return z_list
