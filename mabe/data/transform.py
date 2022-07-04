@@ -10,6 +10,8 @@ class TransformsSimCLR:
         self.train_transforms = T.Compose(
             [
                 T.RandomResizedCrop(size=size, scale=(0.25, 1.0)),
+                T.RandomGrayscale(p=0.2),
+                T.ColorJitter(0.4, 0.4, 0.4, 0.4),
                 T.RandomHorizontalFlip(),
                 T.RandomVerticalFlip(),
                 # Taking the means of the normal distributions of the 3 channels
@@ -28,6 +30,8 @@ class TransformsSimCLR:
         self.train_transforms_td = T.Compose(
             [
                 T.RandomResizedCrop(size=size, scale=(0.25, 1.0)),
+                T.RandomGrayscale(p=0.2),
+                T.ColorJitter(0.4, 0.4, 0.4, 0.4),
                 T.RandomHorizontalFlip(),
                 T.RandomVerticalFlip(),
                 TemporalDifference(p=0.5),
