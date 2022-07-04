@@ -223,6 +223,8 @@ class MoCo(nn.Module):
 
         # dequeue and enqueue
         self._dequeue_and_enqueue(k1)
+        self._dequeue_and_enqueue(k2)
+        self._dequeue_and_enqueue(k3)
 
         return logits, labels
 
