@@ -131,7 +131,7 @@ class MOCOModel(BaseModel):
         l_total = 0
         loss_dict = OrderedDict()
 
-        logits, labels = self.net(self.x11, self.x12, self.x21, self.x22)
+        logits, labels = self.net(self.x11, self.x12, self.x21, self.x22, self.seq_id)
         l_intra, l_inter = cross_entropy_loss(logits, labels, inter_split=logits.shape[0] // 3, inter_weight=0.1)
         l_total += l_intra
         loss_dict["l_intra"] = l_intra
@@ -173,7 +173,7 @@ class MOCOModel(BaseModel):
             self.feed_data(data, train=False)
             idxs.append(self.idx)
 
-            output = self.net(self.x1, self.x2, self.x3, self.x4)
+            output = self.net(self.x1, self.x2, self.x3, self.x4, self.seq_id)
             feat = output
             feats.append(feat)
 

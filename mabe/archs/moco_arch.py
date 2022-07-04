@@ -158,7 +158,7 @@ class MoCo(nn.Module):
         """
 
         # compute query features
-        q = self.encoder_q(im_q)  # queries: NxC
+        q = self.encoder_k(im_q)  # queries: NxC
         q = nn.functional.normalize(q, dim=1)
 
         # test
