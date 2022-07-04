@@ -81,8 +81,6 @@ def extract_frames(path):
     cap.release()
 
 
-# for path in tqdm(paths):
-#     extract_frames(path)
 # pbar = tqdm(total=len(paths))
 # update = lambda *args: pbar.update()
 # pool = multiprocessing.Pool(64)
