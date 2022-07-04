@@ -168,12 +168,12 @@ def main():
 
     logger.info("Save model")
     model.save(-1, -1)  # -1 stands for the latest
-    logger.info("Validate")
-    model.test(val_set, val_loader)
-    model.save_result(-1, -1, "val")
-    logger.info("Test")
-    model.test(test_set, test_loader)
-    model.save_result(-1, -1, "test")
+    # logger.info("Validate")
+    # model.test(val_set, val_loader)
+    # model.save_result(-1, -1, "val")
+    # logger.info("Test")
+    # model.test(test_set, test_loader)
+    # model.save_result(-1, -1, "test")
     if tb_logger is not None:
         tb_logger.close()
     consumed_time = str(datetime.timedelta(seconds=int(time.time() - start_time)))

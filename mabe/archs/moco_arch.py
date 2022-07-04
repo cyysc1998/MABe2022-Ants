@@ -19,6 +19,8 @@ class MoCo(nn.Module):
         super(MoCo, self).__init__()
 
         dim = opt["dim"]
+        per_img_dim = dim // 3
+        dim = per_img_dim * 3
         K = opt["K"]
         m = opt["m"]
         T = opt["T"]
@@ -32,8 +34,8 @@ class MoCo(nn.Module):
 
         # create the encoders
         # num_classes is the output fc dimension
-        self.encoder_q = base_encoder(num_classes=dim)
-        self.encoder_k = base_encoder(num_classes=dim)
+        self.encoder_q = base_encoder(num_classes=per_img_dim)
+        self.encoder_k = base_encoder(num_classes=per_img_dim)
         model_url = "https://download.pytorch.org/models/resnet50-19c8e357.pth"
         self.encoder_q = self.load_pretrained_weights(self.encoder_q, model_url)
         self.encoder_k = self.load_pretrained_weights(self.encoder_k, model_url)
@@ -145,7 +147,7 @@ class MoCo(nn.Module):
         model.load_state_dict(pretrained_dict, strict=False)
         return model
 
-    def forward(self, im_q, im_k1, im_k2, im_k3, patch, temperature):
+    def forward(self, im_q, im_k1, im_k2, im_k3, patch):
         """
         Input:
             im_q: a batch of query images
@@ -154,36 +156,30 @@ class MoCo(nn.Module):
             logits, targets
         """
 
+        # test
+        if not self.training:
+            # compute query features
+            q = self.encoder_k(im_q)  # queries: NxC
+            q = nn.functional.normalize(q, dim=1)
+
+            q_a = self.encoder_k(patch['x11_a'])
+            q_b = self.encoder_k(patch['x11_b'])
+            q_a = nn.functional.normalize(q_a, dim=1)
+            q_b = nn.functional.normalize(q_b, dim=1)
+
+            q = torch.cat([q, q_a, q_b], dim=1) # queries: Nx3C
+            return q
+
         # compute query features
         q = self.encoder_q(im_q)  # queries: NxC
         q = nn.functional.normalize(q, dim=1)
 
+        q_a = self.encoder_q(patch['x11_a'])
+        q_b = self.encoder_q(patch['x11_b'])
+        q_a = nn.functional.normalize(q_a, dim=1)
+        q_b = nn.functional.normalize(q_b, dim=1)
 
-        # test
-        if not self.training:
-            return q
-
-
-        # compute patch features a
-        p1_a = self.encoder_k(patch['x1_a'])
-        p2_a = self.encoder_k(patch['x1_b'])
-        p1_a = nn.functional.normalize(p1_a, dim=1)
-        p2_a = nn.functional.normalize(p2_a, dim=1)
-        p1_a_gather = concat_all_gather(p1_a)
-        p2_a_gather = concat_all_gather(p2_a)
-        logits_a1 = p1_a_gather @ p2_a_gather.transpose(1, 0) / temperature
-        logits_a2 = p2_a_gather @ p1_a_gather.transpose(1, 0) / temperature
-
-
-        # compute patch features b
-        p1_b = self.encoder_k(patch['x2_a'])
-        p2_b = self.encoder_k(patch['x2_b'])
-        p1_b = nn.functional.normalize(p1_b, dim=1)
-        p2_b = nn.functional.normalize(p2_b, dim=1)
-        p1_b_gather = concat_all_gather(p1_b)
-        p2_b_gather = concat_all_gather(p2_b)
-        logits_b1 = p1_b_gather @ p2_b_gather.transpose(1, 0) / temperature
-        logits_b2 = p2_b_gather @ p1_b_gather.transpose(1, 0) / temperature
+        q = torch.cat([q, q_a, q_b], dim=1) # queries: Nx3C
 
 
         # compute key features
@@ -205,6 +201,31 @@ class MoCo(nn.Module):
             # split im_k
             k1, k2, k3 = torch.split(k, k.shape[0] // 3, dim=0)
 
+            # concat all patch
+            img_patch = torch.cat([
+                patch["x12_a"], patch["x12_b"], 
+                patch["x21_a"], patch["x21_b"], 
+                patch["x22_a"], patch["x22_b"],
+            ], dim=0)
+
+            # shuffle for making use of BN
+            img_patch, idx_unshuffle = self._batch_shuffle_ddp(img_patch)
+
+            k_patch = self.encoder_k(img_patch)
+            k_patch = nn.functional.normalize(k_patch, dim=1)
+
+            # undo shuffle
+            img_patch = self._batch_unshuffle_ddp(k_patch, idx_unshuffle)
+
+            x12_a, x12_b, x21_a, x21_b, x22_a, x22_b = torch.split(
+                img_patch, img_patch.shape[0] // 6, dim=0
+            )
+
+            k1 = torch.cat([k1, x12_a, x12_b], dim=1)
+            k2 = torch.cat([k2, x21_a, x21_b], dim=1)
+            k3 = torch.cat([k3, x22_a, x22_b], dim=1)
+
+
         # compute logits
         # Einstein sum is more intuitive
         # positive logits: Nx1
@@ -219,7 +240,7 @@ class MoCo(nn.Module):
         logits = torch.cat([l_pos, l_neg], dim=1)
 
         # apply temperature
-        logits /= temperature
+        logits /= self.T
 
         # labels: positive key indicators
         labels = torch.zeros(logits.shape[0], dtype=torch.long).cuda()
@@ -227,7 +248,7 @@ class MoCo(nn.Module):
         # dequeue and enqueue
         self._dequeue_and_enqueue(k1)
 
-        return logits, labels, logits_a1, logits_a2, logits_b1, logits_b2
+        return logits, labels
 
 
 # utils

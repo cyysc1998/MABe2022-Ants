@@ -104,62 +104,54 @@ class MOCOModel(BaseModel):
             self.x12 = self.transform_train_td(x1)
             self.x21 = self.transform_train(x2)
             self.x22 = self.transform_train_td(x2)
-            self.x1_a = self.transform_train(x1_a)
-            self.x1_b = self.transform_train(x1_b)
-            self.x2_a = self.transform_train(x2_a)
-            self.x2_b = self.transform_train(x2_b)
-            # self.x12_a = self.transform_train(x12_a)
-            # self.x12_b = self.transform_train(x12_b)
+            self.x11_a = self.transform_train(x1_a)
+            self.x11_b = self.transform_train(x1_b)
+            self.x12_a = self.transform_train(x1_a)
+            self.x12_b = self.transform_train(x1_b)
+            self.x21_a = self.transform_train(x2_a)
+            self.x21_b = self.transform_train(x2_b)
+            self.x22_a = self.transform_train(x2_a)
+            self.x22_b = self.transform_train(x2_b)
         else:
-            self.x1 = self.transform_val(x1)
-            self.x2 = self.x1
-            self.x3 = self.x1
-            self.x4 = self.x1
-            self.x1_a = self.x1
-            self.x1_b = self.x1
-            self.x2_a = self.x1
-            self.x2_b = self.x1
+            self.x11 = self.transform_val(x1)
+            self.x12 = self.x11
+            self.x21 = self.x11
+            self.x22 = self.x11
+            self.x11_a = self.transform_val(x1_a)
+            self.x11_b = self.transform_val(x1_b)
+            self.x12_a = self.transform_val(x1_a)
+            self.x12_b = self.transform_val(x1_b)
+            self.x21_a = self.transform_val(x2_a)
+            self.x21_b = self.transform_val(x2_b)
+            self.x22_a = self.transform_val(x2_a)
+            self.x22_b = self.transform_val(x2_b)
+        self.patch = {
+                'x11_a': self.x11_a,
+                'x11_b': self.x11_b,
+                'x12_a': self.x12_a,
+                'x12_b': self.x12_b, 
+                'x21_a': self.x21_a,
+                'x21_b': self.x21_b,
+                'x22_a': self.x22_a,
+                'x22_b': self.x22_b,
+            }
         if "label" in data:
             self.label = data["label"].to(self.device, non_blocking=True)
 
     def optimize_parameters_amp(self, current_iter):
-        T = lambda x: 0.07 if x < 25000 else 0.07
         self.optimizer.zero_grad()
 
         with autocast():
             l_total = 0
             loss_dict = OrderedDict()
-            patch = {
-                'x1_a': self.x1_a,
-                'x1_b': self.x1_b,
-                'x2_a': self.x2_a,
-                'x2_b': self.x2_b
-            }
-            logits, labels, logits_a1, logits_a2, logits_b1, logits_b2 = self.net(self.x11, self.x12, self.x21, self.x22, patch, T(current_iter))
+            logits, labels = self.net(self.x11, self.x12, self.x21, self.x22, self.patch)
             l_intra, l_inter = cross_entropy_loss(logits, labels, inter_split=logits.shape[0] // 3)
-            l_patch_a = cross_entropy_loss_base(logits_a1,
-                    torch.arange(logits_a1.shape[0]).to(self.device, non_blocking=True)
-                ) + \
-                cross_entropy_loss_base(logits_a2,
-                    torch.arange(logits_a2.shape[0]).to(self.device, non_blocking=True)
-                )
-            l_patch_b = cross_entropy_loss_base(logits_b1,
-                    torch.arange(logits_b1.shape[0]).to(self.device, non_blocking=True)
-                ) + \
-                cross_entropy_loss_base(logits_b2,
-                    torch.arange(logits_b2.shape[0]).to(self.device, non_blocking=True)
-                )
             l_total += l_intra
             loss_dict["l_intra"] = l_intra
             l_inter = l_inter * 1
             l_total += l_inter
             loss_dict["l_inter"] = l_inter
-            l_total += l_patch_a
-            l_total += l_patch_b
-            loss_dict["l_patch_a"] = l_patch_a
-            loss_dict["l_patch_b"] = l_patch_b
-            loss_dict["temperature"] = torch.tensor(T(current_iter)).cuda()
-
+    
         self.scaler.scale(l_total).backward()
         # self.scaler.unscale_(self.optimizer)
         # torch.nn.utils.clip_grad_norm_(
@@ -218,7 +210,7 @@ class MOCOModel(BaseModel):
             self.feed_data(data, train=False)
             idxs.append(self.idx)
 
-            output = self.net(self.x1, self.x2, self.x3, self.x4, self.x1, self.x1)
+            output = self.net(self.x11, self.x12, self.x21, self.x22, self.patch)
             feat = output
             feats.append(feat)
 

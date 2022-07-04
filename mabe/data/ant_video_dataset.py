@@ -63,8 +63,10 @@ class AntVideoDataset(torch.utils.data.Dataset):
         
         ret.update({"x1": frames})
         ret.update({"x2": pos_frames})
-        frame_keypoints = self.keypoints[video_name]["keypoints"][frame_idx-1]
-        pos_frame_keypoints = self.keypoints[video_name]["keypoints"][pos_frame_idx-1]
+        # frame_keypoints = self.keypoints[video_name]["keypoints"][frame_idx-1]
+        # pos_frame_keypoints = self.keypoints[video_name]["keypoints"][pos_frame_idx-1]
+        frame_keypoints = self.get_keypoints(video_name, frame_idx)
+        pos_frame_keypoints = self.get_keypoints(video_name, pos_frame_idx)
         y1, x1, y2, x2 = frame_keypoints
         ret.update({"x1_a": self.crop(full_frames, [x1, y1], size=112)})
         ret.update({"x1_b": self.crop(full_frames, [x2, y2], size=112)})
@@ -81,6 +83,12 @@ class AntVideoDataset(torch.utils.data.Dataset):
 
         return ret
 
+    
+    def get_keypoints(self, video_name, frame_idx):
+        if len(self.keypoints[video_name]["keypoints"]) < 900:
+            return 0, 0, 0, 0
+        return self.keypoints[video_name]["keypoints"][frame_idx-1]
+    
 
     def sample_clip_idx(self, base_idx):
         random_list = [
