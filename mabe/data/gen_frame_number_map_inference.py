@@ -1,6 +1,6 @@
 import numpy as np
 
-root = "../data/ants"
+root = "../data/mouse"
 keypoints_path = f"{root}/submission_keypoints.npy"
 keypoints = np.load(keypoints_path, allow_pickle=True).item()["sequences"]
 frame_number_map_path = f"{root}/frame_number_map_inference.npy"
@@ -8,7 +8,7 @@ frame_number_map = {}
 i = 0
 for k, v in keypoints.items():
     # print(k, v['keypoints'].shape)
-    n = 900
+    n = 1800
     frame_number_map[k] = [i, i + n]
     i += n
 np.save(frame_number_map_path, frame_number_map)

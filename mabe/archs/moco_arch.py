@@ -156,14 +156,17 @@ class MoCo(nn.Module):
         Output:
             logits, targets
         """
+        
+         # test
+        if not self.training:
+            q = self.encoder_k(im_q)  # queries: NxC
+            q = nn.functional.normalize(q, dim=1)
+            return q
 
         # compute query features
         q = self.encoder_q(im_q)  # queries: NxC
         q = nn.functional.normalize(q, dim=1)
 
-        # test
-        if not self.training:
-            return q
 
         # compute key features
         with torch.no_grad():  # no gradient to keys

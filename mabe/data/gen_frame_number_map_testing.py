@@ -1,6 +1,6 @@
 import numpy as np
 
-root = "../data/ants"
+root = "../data/mouse"
 keypoints_path = f"{root}/user_train.npy"
 keypoints = np.load(keypoints_path, allow_pickle=True).item()["sequences"]
 frame_number_map_path = f"{root}/frame_number_map_testing.npy"
